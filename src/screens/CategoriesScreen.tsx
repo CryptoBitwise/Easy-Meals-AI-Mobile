@@ -1,41 +1,32 @@
-import React from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-
-interface Category {
-    id: string;
-    title: string;
-    icon: string;
-    recipeCount: number;
-    type: 'cuisine' | 'dietary' | 'time';
-}
-
-const categories: Category[] = [
-    // Cuisine Types
-    { id: 'italian', title: 'Italian', icon: 'pizza-outline', recipeCount: 24, type: 'cuisine' },
-    { id: 'asian', title: 'Asian', icon: 'restaurant-outline', recipeCount: 31, type: 'cuisine' },
-    { id: 'mexican', title: 'Mexican', icon: 'leaf-outline', recipeCount: 18, type: 'cuisine' },
-    { id: 'mediterranean', title: 'Mediterranean', icon: 'fish-outline', recipeCount: 22, type: 'cuisine' },
-    { id: 'indian', title: 'Indian', icon: 'flame-outline', recipeCount: 28, type: 'cuisine' },
-    { id: 'american', title: 'American', icon: 'flag-outline', recipeCount: 35, type: 'cuisine' },
-
-    // Dietary Restrictions
-    { id: 'vegetarian', title: 'Vegetarian', icon: 'leaf-outline', recipeCount: 42, type: 'dietary' },
-    { id: 'vegan', title: 'Vegan', icon: 'nutrition-outline', recipeCount: 29, type: 'dietary' },
-    { id: 'gluten-free', title: 'Gluten-Free', icon: 'medical-outline', recipeCount: 16, type: 'dietary' },
-    { id: 'low-carb', title: 'Low-Carb', icon: 'fitness-outline', recipeCount: 19, type: 'dietary' },
-    { id: 'keto', title: 'Keto', icon: 'flame-outline', recipeCount: 14, type: 'dietary' },
-    { id: 'pescatarian', title: 'Pescatarian', icon: 'fish-outline', recipeCount: 23, type: 'dietary' },
-
-    // Cooking Time
-    { id: 'quick', title: 'Quick (< 30 min)', icon: 'flash-outline', recipeCount: 47, type: 'time' },
-    { id: 'medium', title: 'Medium (30-60 min)', icon: 'time-outline', recipeCount: 38, type: 'time' },
-    { id: 'slow', title: 'Slow Cooker', icon: 'timer-outline', recipeCount: 12, type: 'time' },
-];
+import recipeService, { Category } from '../services/recipeService';
 
 const CategoriesScreen = ({ navigation }: any) => {
     const { theme } = useTheme();
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        loadCategories();
+    }, []);
+
+    const loadCategories = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const fetchedCategories = await recipeService.fetchCategories();
+            setCategories(fetchedCategories);
+        } catch (err) {
+            setError('Failed to load categories');
+            console.error('Error loading categories:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const renderCategory = ({ item }: { item: Category }) => (
         <TouchableOpacity
@@ -71,39 +62,113 @@ const CategoriesScreen = ({ navigation }: any) => {
 
     const cuisineCategories = categories.filter(c => c.type === 'cuisine');
     const dietaryCategories = categories.filter(c => c.type === 'dietary');
-    const timeCategories = categories.filter(c => c.type === 'time');
+
+    if (loading) {
+        return (
+            <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+                {/* Header with back arrow */}
+                <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+                    <TouchableOpacity
+                        style={styles.backButton}
+                        onPress={() => navigation.goBack()}
+                        accessibilityLabel="Go back"
+                    >
+                        <Ionicons name="arrow-back" size={24} color={theme.text} />
+                    </TouchableOpacity>
+                    <Text style={[styles.headerTitle, { color: theme.text }]}>Recipe Categories</Text>
+                    <View style={{ width: 24 }} />
+                </View>
+
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={theme.primary} />
+                    <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Loading categories...</Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    if (error) {
+        return (
+            <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+                {/* Header with back arrow */}
+                <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+                    <TouchableOpacity
+                        style={styles.backButton}
+                        onPress={() => navigation.goBack()}
+                        accessibilityLabel="Go back"
+                    >
+                        <Ionicons name="arrow-back" size={24} color={theme.text} />
+                    </TouchableOpacity>
+                    <Text style={[styles.headerTitle, { color: theme.text }]}>Recipe Categories</Text>
+                    <View style={{ width: 24 }} />
+                </View>
+
+                <View style={styles.errorContainer}>
+                    <Ionicons name="cloud-offline-outline" size={48} color={theme.textSecondary} />
+                    <Text style={[styles.errorText, { color: theme.text }]}>{error}</Text>
+                    <TouchableOpacity
+                        style={[styles.retryButton, { backgroundColor: theme.primary }]}
+                        onPress={loadCategories}
+                    >
+                        <Text style={[styles.retryButtonText, { color: '#fff' }]}>Retry</Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     return (
-        <View style={[styles.container, { backgroundColor: theme.background }]}>
-            <Text style={[styles.header, { color: theme.primary }]}>Recipe Categories</Text>
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+            {/* Header with back arrow */}
+            <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+                <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={() => navigation.goBack()}
+                    accessibilityLabel="Go back"
+                >
+                    <Ionicons name="arrow-back" size={24} color={theme.text} />
+                </TouchableOpacity>
+                <Text style={[styles.headerTitle, { color: theme.text }]}>Recipe Categories</Text>
+                <View style={{ width: 24 }} />
+            </View>
 
             <FlatList
                 data={[]}
                 renderItem={() => null}
                 ListHeaderComponent={() => (
                     <View>
-                        {renderSection('Cuisine Types', cuisineCategories)}
-                        {renderSection('Dietary Preferences', dietaryCategories)}
-                        {renderSection('Cooking Time', timeCategories)}
+                        {cuisineCategories.length > 0 && renderSection('Cuisine Types', cuisineCategories)}
+                        {dietaryCategories.length > 0 && renderSection('Dietary Preferences', dietaryCategories)}
                     </View>
                 )}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: 32 }}
             />
-        </View>
+        </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        paddingTop: 48,
+        paddingTop: 0,
         paddingHorizontal: 16,
     },
     header: {
-        fontSize: 28,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 16,
+        paddingHorizontal: 16,
+        borderBottomWidth: 1,
+    },
+    backButton: {
+        padding: 8, // Larger touch target
+        marginLeft: -8, // Compensate for padding
+    },
+    headerTitle: {
+        fontSize: 24,
         fontWeight: 'bold',
-        marginBottom: 24,
     },
     section: {
         marginBottom: 24,
@@ -141,6 +206,36 @@ const styles = StyleSheet.create({
     },
     recipeCount: {
         fontSize: 14,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingText: {
+        marginTop: 16,
+        fontSize: 16,
+    },
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 32,
+    },
+    errorText: {
+        marginTop: 16,
+        fontSize: 16,
+        textAlign: 'center',
+        marginBottom: 24,
+    },
+    retryButton: {
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        borderRadius: 8,
+    },
+    retryButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
     },
 });
 

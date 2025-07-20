@@ -210,54 +210,59 @@ export default function MealPlanScreen({ navigation }: any) {
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-                <View style={{ flex: 1 }}>
-                    {/* Header */}
-                    <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-                        <TouchableOpacity onPress={() => navigation.goBack()} accessibilityLabel="Go back">
-                            <Ionicons name="arrow-back" size={24} color={theme.text} />
-                        </TouchableOpacity>
-                        <Text style={[styles.headerTitle, { color: theme.text }]}>Meal Plan</Text>
-                        <TouchableOpacity onPress={() => openEditModal(selectedDay, 'breakfast')} accessibilityLabel="Add meal">
-                            <Ionicons name="add" size={24} color={theme.text} />
-                        </TouchableOpacity>
-                    </View>
+            {/* Header */}
+            <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+                <TouchableOpacity onPress={() => navigation.goBack()} accessibilityLabel="Go back">
+                    <Ionicons name="arrow-back" size={24} color={theme.text} />
+                </TouchableOpacity>
+                <Text style={[styles.headerTitle, { color: theme.text }]}>Meal Plan</Text>
+                <TouchableOpacity onPress={() => openEditModal(selectedDay, 'breakfast')} accessibilityLabel="Add meal">
+                    <Ionicons name="add" size={24} color={theme.text} />
+                </TouchableOpacity>
+            </View>
 
-                    {/* Day Selector */}
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        style={[styles.daySelector, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}
-                        contentContainerStyle={styles.daySelectorContent}
-                    >
-                        {daysOfWeek.map((day) => {
-                            const isToday = day === getToday();
-                            const isSelected = selectedDay === day;
-                            return (
-                                <TouchableOpacity
-                                    key={day}
-                                    style={[
-                                        styles.dayButton,
-                                        { backgroundColor: isSelected ? theme.primary : theme.background, borderColor: isToday ? theme.primary : theme.border },
-                                        isToday && styles.todayButton,
-                                    ]}
-                                    onPress={() => setSelectedDay(day)}
-                                    accessibilityLabel={isToday ? `${day} (Today)` : day}
-                                >
-                                    <Text style={[
-                                        styles.dayText,
-                                        { color: isSelected ? '#fff' : isToday ? theme.primary : theme.textSecondary },
-                                        isSelected && styles.selectedDayText,
-                                    ]}>
-                                        {day.slice(0, 3)}
-                                    </Text>
-                                </TouchableOpacity>
-                            );
-                        })}
-                    </ScrollView>
+            {/* Day Selector */}
+            <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={[styles.daySelector, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}
+                contentContainerStyle={styles.daySelectorContent}
+            >
+                {daysOfWeek.map((day) => {
+                    const isToday = day === getToday();
+                    const isSelected = selectedDay === day;
+                    return (
+                        <TouchableOpacity
+                            key={day}
+                            style={[
+                                styles.dayButton,
+                                { backgroundColor: isSelected ? theme.primary : theme.background, borderColor: isToday ? theme.primary : theme.border },
+                                isToday && styles.todayButton,
+                            ]}
+                            onPress={() => setSelectedDay(day)}
+                            accessibilityLabel={isToday ? `${day} (Today)` : day}
+                        >
+                            <Text style={[
+                                styles.dayText,
+                                { color: isSelected ? '#fff' : isToday ? theme.primary : theme.textSecondary },
+                                isSelected && styles.selectedDayText,
+                            ]}>
+                                {day.slice(0, 3)}
+                            </Text>
+                        </TouchableOpacity>
+                    );
+                })}
+            </ScrollView>
 
-                    {/* Meal Plan Content */}
-                    <ScrollView style={styles.content}>
+            {/* Meal Plan Content */}
+            <ScrollView
+                style={styles.content}
+                showsVerticalScrollIndicator={true}
+                contentContainerStyle={{ paddingBottom: 20 }}
+                keyboardShouldPersistTaps="handled"
+            >
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                    <View>
                         <View style={styles.mealSection}>
                             <Text style={[styles.sectionTitle, { color: theme.text }]}>Today's Meals</Text>
 
@@ -296,119 +301,119 @@ export default function MealPlanScreen({ navigation }: any) {
                                 <Text style={[styles.actionButtonText, { color: theme.primary }]}>Shopping List</Text>
                             </TouchableOpacity>
                         </View>
-                    </ScrollView>
+                    </View>
+                </TouchableWithoutFeedback>
+            </ScrollView>
 
-                    {/* Add/Edit Meal Modal */}
-                    <Modal
-                        visible={modalVisible}
-                        animationType="slide"
-                        transparent
-                        onRequestClose={() => setModalVisible(false)}
-                    >
-                        <KeyboardAvoidingView
-                            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                            style={styles.modalContainer}
-                        >
-                            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-                                <View style={[styles.modalContent, { backgroundColor: theme.surface, shadowColor: theme.shadow }]}>
-                                    <Text style={[styles.modalTitle, { color: theme.text }]}>{editingSlot?.mealType ? `Edit ${editingSlot.mealType.charAt(0).toUpperCase() + editingSlot.mealType.slice(1)}` : 'Edit Meal'}</Text>
+            {/* Add/Edit Meal Modal */}
+            <Modal
+                visible={modalVisible}
+                animationType="slide"
+                transparent
+                onRequestClose={() => setModalVisible(false)}
+            >
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                    style={styles.modalContainer}
+                >
+                    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                        <View style={[styles.modalContent, { backgroundColor: theme.surface, shadowColor: theme.shadow }]}>
+                            <Text style={[styles.modalTitle, { color: theme.text }]}>{editingSlot?.mealType ? `Edit ${editingSlot.mealType.charAt(0).toUpperCase() + editingSlot.mealType.slice(1)}` : 'Edit Meal'}</Text>
 
-                                    <TouchableOpacity
-                                        style={[styles.recipePickerButton, { backgroundColor: theme.primary, borderColor: theme.primary }]}
-                                        onPress={openRecipePicker}
-                                    >
-                                        <Ionicons name="restaurant-outline" size={20} color="#fff" />
-                                        <Text style={styles.recipePickerText}>Pick a Recipe</Text>
-                                    </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.recipePickerButton, { backgroundColor: theme.primary, borderColor: theme.primary }]}
+                                onPress={openRecipePicker}
+                            >
+                                <Ionicons name="restaurant-outline" size={20} color="#fff" />
+                                <Text style={styles.recipePickerText}>Pick a Recipe</Text>
+                            </TouchableOpacity>
 
-                                    {selectedRecipe && (
-                                        <View style={[styles.selectedRecipeCard, { backgroundColor: theme.background, borderColor: theme.border }]}>
-                                            <Text style={styles.recipeEmoji}>{selectedRecipe.image}</Text>
-                                            <View style={styles.recipeInfo}>
-                                                <Text style={[styles.recipeTitle, { color: theme.text }]}>{selectedRecipe.title}</Text>
-                                                <Text style={[styles.recipeCuisine, { color: theme.textSecondary }]}>{selectedRecipe.cuisine}</Text>
-                                            </View>
-                                            <TouchableOpacity onPress={() => setSelectedRecipe(null)}>
-                                                <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
-                                            </TouchableOpacity>
-                                        </View>
-                                    )}
-
-                                    <TextInput
-                                        style={[styles.modalInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
-                                        placeholder="Meal Name"
-                                        value={mealName}
-                                        onChangeText={setMealName}
-                                        placeholderTextColor={theme.textSecondary}
-                                        accessibilityLabel="Meal name"
-                                    />
-                                    <TextInput
-                                        style={[styles.modalInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
-                                        placeholder="Time (e.g. 8:00 AM)"
-                                        value={mealTime}
-                                        onChangeText={setMealTime}
-                                        placeholderTextColor={theme.textSecondary}
-                                        accessibilityLabel="Meal time"
-                                    />
-                                    <View style={styles.modalActions}>
-                                        <TouchableOpacity style={styles.modalButton} onPress={() => setModalVisible(false)} accessibilityLabel="Cancel">
-                                            <Text style={styles.modalButtonText}>Cancel</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                            style={[styles.modalButton, styles.saveButton, { backgroundColor: (mealName.trim() && mealTime.trim()) ? theme.primary : theme.border }]}
-                                            onPress={handleSaveMeal}
-                                            disabled={!(mealName.trim() && mealTime.trim())}
-                                            accessibilityLabel="Save meal"
-                                        >
-                                            <Text style={[styles.modalButtonText, { color: (mealName.trim() && mealTime.trim()) ? '#fff' : theme.textSecondary }]}>Save</Text>
-                                        </TouchableOpacity>
+                            {selectedRecipe && (
+                                <View style={[styles.selectedRecipeCard, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                                    <Text style={styles.recipeEmoji}>{selectedRecipe.image}</Text>
+                                    <View style={styles.recipeInfo}>
+                                        <Text style={[styles.recipeTitle, { color: theme.text }]}>{selectedRecipe.title}</Text>
+                                        <Text style={[styles.recipeCuisine, { color: theme.textSecondary }]}>{selectedRecipe.cuisine}</Text>
                                     </View>
+                                    <TouchableOpacity onPress={() => setSelectedRecipe(null)}>
+                                        <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
+                                    </TouchableOpacity>
                                 </View>
-                            </TouchableWithoutFeedback>
-                        </KeyboardAvoidingView>
-                    </Modal>
-
-                    {/* Recipe Picker Modal */}
-                    <Modal
-                        visible={recipePickerVisible}
-                        animationType="slide"
-                        transparent
-                        onRequestClose={() => setRecipePickerVisible(false)}
-                    >
-                        <SafeAreaView style={[styles.recipePickerContainer, { backgroundColor: theme.background }]}>
-                            <View style={[styles.recipePickerHeader, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-                                <TouchableOpacity onPress={() => setRecipePickerVisible(false)}>
-                                    <Ionicons name="close" size={24} color={theme.text} />
-                                </TouchableOpacity>
-                                <Text style={[styles.recipePickerTitle, { color: theme.text }]}>Choose Recipe</Text>
-                                <View style={{ width: 24 }} />
-                            </View>
-                            <TextInput
-                                style={[styles.recipeSearchInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.surface }]}
-                                placeholder="Search recipes..."
-                                value={searchQuery}
-                                onChangeText={handlePickerSearch}
-                                placeholderTextColor={theme.textSecondary}
-                            />
-                            {pickerLoading ? (
-                                <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 32 }} />
-                            ) : pickerError ? (
-                                <Text style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 32 }}>{pickerError}</Text>
-                            ) : pickerRecipes.length === 0 ? (
-                                <Text style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 32 }}>No recipes found.</Text>
-                            ) : (
-                                <FlatList
-                                    data={pickerRecipes}
-                                    renderItem={renderRecipeItem}
-                                    keyExtractor={(item) => item.id}
-                                    style={styles.recipeList}
-                                    showsVerticalScrollIndicator={false}
-                                />
                             )}
-                        </SafeAreaView>
-                    </Modal>
-                </View>
-            </TouchableWithoutFeedback>
+
+                            <TextInput
+                                style={[styles.modalInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
+                                placeholder="Meal Name"
+                                value={mealName}
+                                onChangeText={setMealName}
+                                placeholderTextColor={theme.textSecondary}
+                                accessibilityLabel="Meal name"
+                            />
+                            <TextInput
+                                style={[styles.modalInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
+                                placeholder="Time (e.g. 8:00 AM)"
+                                value={mealTime}
+                                onChangeText={setMealTime}
+                                placeholderTextColor={theme.textSecondary}
+                                accessibilityLabel="Meal time"
+                            />
+                            <View style={styles.modalActions}>
+                                <TouchableOpacity style={styles.modalButton} onPress={() => setModalVisible(false)} accessibilityLabel="Cancel">
+                                    <Text style={styles.modalButtonText}>Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.modalButton, styles.saveButton, { backgroundColor: (mealName.trim() && mealTime.trim()) ? theme.primary : theme.border }]}
+                                    onPress={handleSaveMeal}
+                                    disabled={!(mealName.trim() && mealTime.trim())}
+                                    accessibilityLabel="Save meal"
+                                >
+                                    <Text style={[styles.modalButtonText, { color: (mealName.trim() && mealTime.trim()) ? '#fff' : theme.textSecondary }]}>Save</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </TouchableWithoutFeedback>
+                </KeyboardAvoidingView>
+            </Modal>
+
+            {/* Recipe Picker Modal */}
+            <Modal
+                visible={recipePickerVisible}
+                animationType="slide"
+                transparent
+                onRequestClose={() => setRecipePickerVisible(false)}
+            >
+                <SafeAreaView style={[styles.recipePickerContainer, { backgroundColor: theme.background }]}>
+                    <View style={[styles.recipePickerHeader, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+                        <TouchableOpacity onPress={() => setRecipePickerVisible(false)}>
+                            <Ionicons name="close" size={24} color={theme.text} />
+                        </TouchableOpacity>
+                        <Text style={[styles.recipePickerTitle, { color: theme.text }]}>Choose Recipe</Text>
+                        <View style={{ width: 24 }} />
+                    </View>
+                    <TextInput
+                        style={[styles.recipeSearchInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.surface }]}
+                        placeholder="Search recipes..."
+                        value={searchQuery}
+                        onChangeText={handlePickerSearch}
+                        placeholderTextColor={theme.textSecondary}
+                    />
+                    {pickerLoading ? (
+                        <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 32 }} />
+                    ) : pickerError ? (
+                        <Text style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 32 }}>{pickerError}</Text>
+                    ) : pickerRecipes.length === 0 ? (
+                        <Text style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 32 }}>No recipes found.</Text>
+                    ) : (
+                        <FlatList
+                            data={pickerRecipes}
+                            renderItem={renderRecipeItem}
+                            keyExtractor={(item) => item.id}
+                            style={styles.recipeList}
+                            showsVerticalScrollIndicator={false}
+                        />
+                    )}
+                </SafeAreaView>
+            </Modal>
         </SafeAreaView>
     );
 }

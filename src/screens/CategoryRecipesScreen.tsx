@@ -1,17 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet, ActivityIndicator, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import recipeService, { Recipe } from '../services/recipeService';
+import recipeService, { Recipe, Category } from '../services/recipeService';
 import EmptyState from '../components/EmptyState';
-
-interface Category {
-    id: string;
-    title: string;
-    icon: string;
-    recipeCount: number;
-    type: 'cuisine' | 'dietary' | 'time';
-}
 
 const CategoryRecipesScreen = ({ route, navigation }: any) => {
     const { theme } = useTheme();
@@ -28,15 +20,8 @@ const CategoryRecipesScreen = ({ route, navigation }: any) => {
         setLoading(true);
         setError(null);
         try {
-            let results: Recipe[] = [];
-            if (category.type === 'cuisine') {
-                // For cuisine categories, well search by area (cuisine)
-                results = await recipeService.searchRecipes(category.title);
-            } else {
-                // For other categories, fetch all recipes
-                results = await recipeService.fetchAllRecipes();
-            }
-
+            // Use the new API method to get recipes by category
+            const results = await recipeService.getRecipesByCategory(category);
             setRecipes(results);
         } catch (e) {
             setError('Failed to load recipes');
@@ -85,7 +70,7 @@ const CategoryRecipesScreen = ({ route, navigation }: any) => {
                 <EmptyState
                     icon="alert-circle-outline"
                     title="Error Loading Recipes"
-                    subtitle={error}
+                    message={error}
                     actionText="Try Again"
                     onAction={loadRecipes}
                 />
@@ -94,9 +79,13 @@ const CategoryRecipesScreen = ({ route, navigation }: any) => {
     }
 
     return (
-        <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
             <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
+                <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={() => navigation.goBack()}
+                    accessibilityLabel="Go back"
+                >
                     <Ionicons name="arrow-back" size={24} color={theme.text} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: theme.text }]}>{category.title}</Text>
@@ -107,7 +96,7 @@ const CategoryRecipesScreen = ({ route, navigation }: any) => {
                 <EmptyState
                     icon="restaurant-outline"
                     title="No Recipes Found"
-                    subtitle={`No recipes found for ${category.title}. Try searching for something else.`}
+                    message={`No recipes found for ${category.title}. Try searching for something else.`}
                     actionText="Go Back"
                     onAction={() => navigation.goBack()}
                 />
@@ -120,7 +109,7 @@ const CategoryRecipesScreen = ({ route, navigation }: any) => {
                     showsVerticalScrollIndicator={false}
                 />
             )}
-        </View>
+        </SafeAreaView>
     );
 };
 
@@ -135,6 +124,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingVertical: 16,
         borderBottomWidth: 1,
+    },
+    backButton: {
+        padding: 8, // Larger touch target
+        marginLeft: -8, // Compensate for padding
     },
     headerTitle: {
         fontSize: 18,

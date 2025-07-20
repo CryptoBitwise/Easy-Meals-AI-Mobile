@@ -127,7 +127,7 @@ export default function RecipeDetailScreen({ route, navigation }: any) {
                 <EmptyState
                     icon="alert-circle-outline"
                     title="Recipe Not Found"
-                    subtitle={error || "Could not load recipe details"}
+                    message={error || "Could not load recipe details"}
                     actionText="Go Back"
                     onAction={() => navigation.goBack()}
                 />
@@ -140,7 +140,11 @@ export default function RecipeDetailScreen({ route, navigation }: any) {
             <ScrollView style={styles.scrollView}>
                 {/* Header */}
                 <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-                    <TouchableOpacity onPress={() => navigation.goBack()}>
+                    <TouchableOpacity
+                        style={styles.backButton}
+                        onPress={() => navigation.goBack()}
+                        accessibilityLabel="Go back"
+                    >
                         <Ionicons name="arrow-back" size={24} color={theme.text} />
                     </TouchableOpacity>
                     <Text style={[styles.headerTitle, { color: theme.text }]}>Recipe</Text>
@@ -174,6 +178,12 @@ export default function RecipeDetailScreen({ route, navigation }: any) {
                                 <Text style={[styles.metaText, { color: theme.textSecondary }]}>{recipeDetail.cuisine}</Text>
                             </View>
                         )}
+                        <View style={styles.metaItem}>
+                            <Ionicons name="fitness-outline" size={16} color={theme.textSecondary} />
+                            <Text style={[styles.metaText, { color: theme.textSecondary }]}>
+                                {recipeDetail.difficulty || 'Intermediate'}
+                            </Text>
+                        </View>
                     </View>
                 </View>
 
@@ -193,7 +203,7 @@ export default function RecipeDetailScreen({ route, navigation }: any) {
                         <Text style={[styles.sectionTitle, { color: theme.text }]}>Tags</Text>
                         <View style={styles.tagsContainer}>
                             {recipeDetail.tags.map((tag, index) => (
-                                <View key={index} style={[styles.tag, { backgroundColor: theme.primary }]}>
+                                <View key={`${tag}-${index}`} style={[styles.tag, { backgroundColor: theme.primary }]}>
                                     <Text style={styles.tagText}>{tag}</Text>
                                 </View>
                             ))}
@@ -235,6 +245,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 20,
         borderBottomWidth: 1,
+    },
+    backButton: {
+        padding: 8, // Larger touch target
+        marginLeft: -8, // Compensate for padding
     },
     headerTitle: {
         fontSize: 18,

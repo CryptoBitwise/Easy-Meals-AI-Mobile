@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import preferencesService, { UserPreferences } from '../services/preferencesService';
@@ -148,9 +148,13 @@ const PreferencesScreen = ({ navigation }: any) => {
     );
 
     return (
-        <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
             <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
+                <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={() => navigation.goBack()}
+                    accessibilityLabel="Go back"
+                >
                     <Ionicons name="arrow-back" size={24} color={theme.text} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: theme.text }]}>Preferences</Text>
@@ -158,40 +162,97 @@ const PreferencesScreen = ({ navigation }: any) => {
             </View>
 
             <ScrollView style={styles.content}>
-                {renderOptionChip(
-                    dietaryOptions,
-                    preferences.dietaryRestrictions,
-                    toggleDietaryRestriction,
-                    'Dietary Restrictions'
-                )}
+                {/* Dietary Preferences Section */}
+                <View style={styles.sectionGroup}>
+                    <Text style={[styles.groupTitle, { color: theme.textSecondary }]}>DIETARY PREFERENCES</Text>
+                    {renderOptionChip(
+                        dietaryOptions,
+                        preferences.dietaryRestrictions,
+                        toggleDietaryRestriction,
+                        'Dietary Restrictions'
+                    )}
+                </View>
 
-                {renderSingleChoice(
-                    skillLevels,
-                    preferences.cookingSkill,
-                    (skill) => savePreferences({ ...preferences, cookingSkill: skill }),
-                    'Cooking Skill Level'
-                )}
+                {/* Cooking Preferences Section */}
+                <View style={styles.sectionGroup}>
+                    <Text style={[styles.groupTitle, { color: theme.textSecondary }]}>COOKING PREFERENCES</Text>
 
-                {renderOptionChip(
-                    cuisineOptions,
-                    preferences.favoriteCuisines,
-                    toggleFavoriteCuisine,
-                    'Favorite Cuisines'
-                )}
+                    {/* Cooking Skill Level */}
+                    <View style={styles.section}>
+                        <Text style={[styles.sectionTitle, { color: theme.primary }]}>Cooking Skill Level</Text>
+                        <View style={styles.chipContainer}>
+                            {skillLevels.map((option) => (
+                                <TouchableOpacity
+                                    key={option}
+                                    style={[
+                                        styles.chip,
+                                        {
+                                            backgroundColor: preferences.cookingSkill === option ? theme.primary : theme.surface,
+                                            borderColor: theme.border,
+                                        }
+                                    ]}
+                                    onPress={() => savePreferences({ ...preferences, cookingSkill: option })}
+                                >
+                                    <Text style={[
+                                        styles.chipText,
+                                        { color: preferences.cookingSkill === option ? '#fff' : theme.text }
+                                    ]}>
+                                        {option}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
 
-                {renderOptionChip(
-                    allergyOptions,
-                    preferences.allergies,
-                    toggleAllergy,
-                    'Allergies & Intolerances'
-                )}
+                    {/* Spice Level */}
+                    <View style={styles.section}>
+                        <Text style={[styles.sectionTitle, { color: theme.primary }]}>Preferred Spice Level</Text>
+                        <View style={styles.chipContainer}>
+                            {spiceLevels.map((option) => (
+                                <TouchableOpacity
+                                    key={option}
+                                    style={[
+                                        styles.chip,
+                                        {
+                                            backgroundColor: preferences.spiceLevel === option ? theme.primary : theme.surface,
+                                            borderColor: theme.border,
+                                        }
+                                    ]}
+                                    onPress={() => savePreferences({ ...preferences, spiceLevel: option })}
+                                >
+                                    <Text style={[
+                                        styles.chipText,
+                                        { color: preferences.spiceLevel === option ? '#fff' : theme.text }
+                                    ]}>
+                                        {option}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+                </View>
 
-                {renderSingleChoice(
-                    spiceLevels,
-                    preferences.spiceLevel,
-                    (level) => savePreferences({ ...preferences, spiceLevel: level }),
-                    'Preferred Spice Level'
-                )}
+                {/* Cuisine Preferences Section */}
+                <View style={styles.sectionGroup}>
+                    <Text style={[styles.groupTitle, { color: theme.textSecondary }]}>CUISINE PREFERENCES</Text>
+                    {renderOptionChip(
+                        cuisineOptions,
+                        preferences.favoriteCuisines,
+                        toggleFavoriteCuisine,
+                        'Favorite Cuisines'
+                    )}
+                </View>
+
+                {/* Health & Safety Section */}
+                <View style={styles.sectionGroup}>
+                    <Text style={[styles.groupTitle, { color: theme.textSecondary }]}>HEALTH & SAFETY</Text>
+                    {renderOptionChip(
+                        allergyOptions,
+                        preferences.allergies,
+                        toggleAllergy,
+                        'Allergies & Intolerances'
+                    )}
+                </View>
 
                 <View style={styles.section}>
                     <Text style={[styles.sectionTitle, { color: theme.primary }]}>Serving Size</Text>
@@ -241,7 +302,7 @@ const PreferencesScreen = ({ navigation }: any) => {
                     </TouchableOpacity>
                 </View>
             </ScrollView>
-        </View>
+        </SafeAreaView>
     );
 };
 
@@ -256,6 +317,10 @@ const styles = StyleSheet.create({
         padding: 20,
         borderBottomWidth: 1,
     },
+    backButton: {
+        padding: 8, // Larger touch target
+        marginLeft: -8, // Compensate for padding
+    },
     headerTitle: {
         fontSize: 20,
         fontWeight: 'bold',
@@ -266,6 +331,16 @@ const styles = StyleSheet.create({
     },
     section: {
         marginBottom: 24,
+    },
+    sectionGroup: {
+        marginBottom: 32,
+    },
+    groupTitle: {
+        fontSize: 12,
+        fontWeight: '700',
+        letterSpacing: 1,
+        marginBottom: 16,
+        marginTop: 8,
     },
     sectionTitle: {
         fontSize: 18,

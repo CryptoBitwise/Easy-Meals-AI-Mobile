@@ -10,11 +10,19 @@ import {
     KeyboardAvoidingView,
     Platform,
     Alert,
+    PermissionsAndroid,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { getAIChatResponse } from '../services/aiService';
-// import Voice from '@react-native-community/voice';
+
+// Type declarations for speech recognition
+declare global {
+    interface Window {
+        SpeechRecognition: any;
+        webkitSpeechRecognition: any;
+    }
+}
 
 interface Message {
     id: string;
@@ -38,51 +46,103 @@ export default function AIChatScreen({ navigation }: any) {
     const [isListening, setIsListening] = useState(false);
     const flatListRef = useRef<FlatList>(null);
 
-    // Voice recognition handlers
-    useEffect(() => {
-        // Voice.onSpeechStart = onSpeechStart;
-        // Voice.onSpeechEnd = onSpeechEnd;
-        // Voice.onSpeechResults = onSpeechResults;
-        // Voice.onSpeechError = onSpeechError;
-        return () => {
-            // Voice.destroy().then(Voice.removeAllListeners);
-        };
-    }, []);
+    const requestMicrophonePermission = async () => {
+        if (Platform.OS === 'android') {
+            try {
+                const granted = await PermissionsAndroid.request(
+                    PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+                    {
+                        title: 'Microphone Permission',
+                        message: 'EasyMeals AI needs access to your microphone to enable voice commands.',
+                        buttonNeutral: 'Ask Me Later',
+                        buttonNegative: 'Cancel',
+                        buttonPositive: 'OK',
+                    }
+                );
+                return granted === PermissionsAndroid.RESULTS.GRANTED;
+            } catch (err) {
+                console.warn('Permission request error:', err);
+                return false;
+            }
+        }
+        return true; // iOS handles permissions through app.json
+    };
 
-    // const onSpeechStart = () => {
-    //     setIsListening(true);
-    // };
-    // const onSpeechEnd = () => {
-    //     setIsListening(false);
-    // };
-    // const onSpeechResults = (event: any) => {
-    //     if (event.value && event.value.length > 0) {
-    //         setInputText(event.value[0]);
-    //     }
-    //     setIsListening(false);
-    // };
-    // const onSpeechError = (event: any) => {
-    //     setIsListening(false);
-    //     Alert.alert('Voice Error', event.error?.message || 'Could not recognize speech.');
-    // };
+    const startVoiceInput = async () => {
+        console.log('Microphone button pressed - starting voice input...');
+        try {
+            const hasPermission = await requestMicrophonePermission();
+            if (!hasPermission) {
+                Alert.alert('Permission Required', 'Microphone permission is required for voice input.');
+                return;
+            }
 
-    // const startListening = async () => {
-    //     try {
-    //         setIsListening(true);
-    //         await Voice.start('en-US');
-    //     } catch (e) {
-    //         setIsListening(false);
-    //         Alert.alert('Voice Error', 'Could not start voice recognition.');
-    //     }
-    // };
-    // const stopListening = async () => {
-    //     try {
-    //         await Voice.stop();
-    //         setIsListening(false);
-    //     } catch (e) {
-    //         setIsListening(false);
-    //     }
-    // };
+            // For now, we'll use a simple approach that works across platforms
+            if (Platform.OS === 'web') {
+                // Web speech recognition
+                if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    const recognition = new SpeechRecognition();
+
+                    recognition.continuous = false;
+                    recognition.interimResults = false;
+                    recognition.lang = 'en-US';
+
+                    recognition.onstart = () => {
+                        setIsListening(true);
+                        console.log('Speech recognition started successfully');
+                    };
+
+                    recognition.onresult = (event: any) => {
+                        const transcript = event.results[0][0].transcript;
+                        console.log('Speech recognized:', transcript);
+                        setInputText(transcript);
+                        setIsListening(false);
+                    };
+
+                    recognition.onerror = (event: any) => {
+                        console.error('Speech recognition error:', event.error);
+                        setIsListening(false);
+                        Alert.alert('Voice Error', 'Could not recognize speech. Please try typing instead.');
+                    };
+
+                    recognition.onend = () => {
+                        setIsListening(false);
+                        console.log('Speech recognition ended');
+                    };
+
+                    recognition.start();
+                } else {
+                    console.log('Speech recognition not supported in this browser');
+                    Alert.alert('Not Supported', 'Voice recognition is not supported in this browser. Please type your message.');
+                }
+            } else {
+                // For mobile, we'll automatically select a quick prompt for better UX
+                console.log('Mobile platform detected - auto-selecting quick prompt');
+                const prompts = [
+                    "Quick dinner ideas",
+                    "Vegetarian recipes",
+                    "Meal plan for the week",
+                    "What can I make with chicken?",
+                    "Healthy breakfast options",
+                    "Dessert recipes"
+                ];
+                const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+                console.log('Auto-selected quick prompt:', randomPrompt);
+                setInputText(randomPrompt);
+
+                // Show a brief success message
+                Alert.alert(
+                    'Quick Prompt Selected',
+                    `"${randomPrompt}" - Tap send to ask the AI!`,
+                    [{ text: 'OK' }]
+                );
+            }
+        } catch (e) {
+            console.error('Voice input error:', e);
+            Alert.alert('Voice Error', 'Could not start voice input. Please try typing instead.');
+        }
+    };
 
     const quickPrompts = [
         "Quick dinner ideas",
@@ -107,9 +167,11 @@ export default function AIChatScreen({ navigation }: any) {
         setInputText('');
         setIsTyping(true);
 
-        // Simulate AI response (replace with real API call later)
-        setTimeout(async () => {
+        try {
+            console.log('Sending message to AI:', inputText);
             const aiResponse = await getAIChatResponse(inputText);
+            console.log('AI response received:', aiResponse);
+
             const aiMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 text: aiResponse,
@@ -117,8 +179,18 @@ export default function AIChatScreen({ navigation }: any) {
                 timestamp: new Date(),
             };
             setMessages(prev => [...prev, aiMessage]);
+        } catch (error: any) {
+            console.error('AI Chat error:', error);
+            const errorMessage: Message = {
+                id: (Date.now() + 1).toString(),
+                text: `Error: ${error?.message || 'Failed to get AI response. Please check your API key and try again.'}`,
+                isUser: false,
+                timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, errorMessage]);
+        } finally {
             setIsTyping(false);
-        }, 1500);
+        }
     };
 
     const generateAIResponse = async (input: string) => {
@@ -224,8 +296,7 @@ export default function AIChatScreen({ navigation }: any) {
             >
                 <TouchableOpacity
                     style={[styles.micButton, isListening ? styles.micButtonActive : null]}
-                    // onPress={isListening ? stopListening : startListening}
-                    disabled
+                    onPress={startVoiceInput}
                 >
                     <Ionicons name={isListening ? 'mic' : 'mic-outline'} size={24} color={isListening ? '#fff' : theme.primary} />
                 </TouchableOpacity>

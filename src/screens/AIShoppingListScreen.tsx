@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-// import Voice from '@react-native-community/voice';
 
 interface ShoppingItem {
     id: string;
@@ -38,51 +37,9 @@ export default function AIShoppingListScreen({ navigation }: any) {
     const [newItemQuantity, setNewItemQuantity] = useState('');
     const [isListening, setIsListening] = useState(false);
 
-    // Voice recognition handlers
-    useEffect(() => {
-        // Voice.onSpeechStart = onSpeechStart;
-        // Voice.onSpeechEnd = onSpeechEnd;
-        // Voice.onSpeechResults = onSpeechResults;
-        // Voice.onSpeechError = onSpeechError;
-        return () => {
-            // Voice.destroy().then(Voice.removeAllListeners);
-        };
-    }, []);
 
-    // const onSpeechStart = () => {
-    //     setIsListening(true);
-    // };
-    // const onSpeechEnd = () => {
-    //     setIsListening(false);
-    // };
-    // const onSpeechResults = (event: any) => {
-    //     if (event.value && event.value.length > 0) {
-    //         setNewItemName(event.value[0]);
-    //     }
-    //     setIsListening(false);
-    // };
-    // const onSpeechError = (event: any) => {
-    //     setIsListening(false);
-    //     Alert.alert('Voice Error', event.error?.message || 'Could not recognize speech.');
-    // };
 
-    // const startListening = async () => {
-    //     try {
-    //         setIsListening(true);
-    //         await Voice.start('en-US');
-    //     } catch (e) {
-    //         setIsListening(false);
-    //         Alert.alert('Voice Error', 'Could not start voice recognition.');
-    //     }
-    // };
-    // const stopListening = async () => {
-    //     try {
-    //         await Voice.stop();
-    //         setIsListening(false);
-    //     } catch (e) {
-    //         setIsListening(false);
-    //     }
-    // };
+
 
     const generateShoppingList = async () => {
         setIsGenerating(true);

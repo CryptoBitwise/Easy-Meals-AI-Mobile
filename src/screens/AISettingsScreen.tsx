@@ -1,274 +1,172 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, TextInput, Alert, ScrollView, Switch } from 'react-native';
+import React, { useState } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    TouchableOpacity,
+    SafeAreaView,
+    Alert,
+    TextInput,
+    ScrollView,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
+import { StorageManager } from '../utils/storage';
 
 export default function AISettingsScreen({ navigation }: any) {
     const { theme } = useTheme();
     const [apiKey, setApiKey] = useState('');
-    const [isApiKeyVisible, setIsApiKeyVisible] = useState(false);
-    const [isAIFeaturesEnabled, setIsAIFeaturesEnabled] = useState(true);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isTesting, setIsTesting] = useState(false);
+    const [testResult, setTestResult] = useState('');
 
-    useEffect(() => {
-        loadSettings();
+    React.useEffect(() => {
+        loadApiKey();
     }, []);
 
-    const loadSettings = async () => {
+    const loadApiKey = async () => {
         try {
-            const savedApiKey = await AsyncStorage.getItem('openai_api_key');
-            if (savedApiKey) {
-                setApiKey(savedApiKey);
+            console.log('Loading API key from storage...');
+            const storedKey = await StorageManager.getApiKey();
+            console.log('Stored API key found:', storedKey ? 'Yes' : 'No');
+            if (storedKey) {
+                setApiKey(storedKey);
+                console.log('API key loaded successfully');
+            } else {
+                console.log('No API key found in storage');
             }
-
-            const aiEnabled = await AsyncStorage.getItem('ai_features_enabled');
-            setIsAIFeaturesEnabled(aiEnabled !== 'false');
         } catch (error) {
-            console.error('Error loading AI settings:', error);
+            console.error('Error loading API key:', error);
         }
     };
 
     const saveApiKey = async () => {
-        if (!apiKey.trim()) {
-            Alert.alert('Error', 'Please enter a valid API key');
-            return;
-        }
-
-        setIsLoading(true);
         try {
-            await AsyncStorage.setItem('openai_api_key', apiKey.trim());
-            Alert.alert('Success', 'API key saved successfully!');
+            console.log('Saving API key to storage...');
+            const success = await StorageManager.setApiKey(apiKey);
+            console.log('API key save result:', success ? 'Success' : 'Failed');
+
+            if (success) {
+                Alert.alert('Success', 'API key saved successfully!');
+            } else {
+                Alert.alert('Error', 'Failed to save API key. Please try again.');
+            }
         } catch (error) {
-            Alert.alert('Error', 'Failed to save API key');
-        } finally {
-            setIsLoading(false);
+            console.error('Error saving API key:', error);
+            Alert.alert('Error', 'Failed to save API key.');
         }
     };
 
     const testApiKey = async () => {
         if (!apiKey.trim()) {
-            Alert.alert('Error', 'Please enter an API key first');
+            Alert.alert('Error', 'Please enter an API key first.');
             return;
         }
 
-        setIsLoading(true);
+        setIsTesting(true);
+        setTestResult('Testing...');
+
         try {
             const response = await fetch('https://api.openai.com/v1/models', {
+                method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${apiKey.trim()}`,
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
                 },
             });
 
             if (response.ok) {
-                Alert.alert('Success', 'API key is valid and working!');
+                setTestResult('✅ API key is valid!');
             } else {
-                Alert.alert('Error', 'Invalid API key. Please check and try again.');
+                const errorData = await response.json();
+                setTestResult(`❌ API key is invalid: ${errorData.error?.message || 'Unknown error'}`);
             }
-        } catch (error) {
-            Alert.alert('Error', 'Failed to test API key. Please check your internet connection.');
+        } catch (error: any) {
+            setTestResult(`❌ Network error: ${error.message}`);
         } finally {
-            setIsLoading(false);
+            setIsTesting(false);
         }
-    };
-
-    const toggleAIFeatures = async (value: boolean) => {
-        setIsAIFeaturesEnabled(value);
-        try {
-            await AsyncStorage.setItem('ai_features_enabled', value.toString());
-        } catch (error) {
-            console.error('Error saving AI features setting:', error);
-        }
-    };
-
-    const clearApiKey = () => {
-        Alert.alert(
-            'Clear API Key',
-            'Are you sure you want to clear your API key? This will disable AI features.',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Clear',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            await AsyncStorage.removeItem('openai_api_key');
-                            setApiKey('');
-                            Alert.alert('Success', 'API key cleared');
-                        } catch (error) {
-                            Alert.alert('Error', 'Failed to clear API key');
-                        }
-                    }
-                }
-            ]
-        );
     };
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-            {/* Header */}
             <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()}>
                     <Ionicons name="arrow-back" size={24} color={theme.text} />
                 </TouchableOpacity>
-                <View style={styles.headerCenter}>
-                    <Ionicons name="settings-outline" size={24} color={theme.primary} />
-                    <Text style={[styles.headerTitle, { color: theme.text }]}>AI Settings</Text>
-                </View>
+                <Text style={[styles.headerTitle, { color: theme.text }]}>AI Settings</Text>
                 <View style={{ width: 24 }} />
             </View>
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                <Text style={[styles.title, { color: theme.text }]}>AI Assistant Settings</Text>
-                <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-                    Configure your AI cooking assistant preferences
-                </Text>
-
                 {/* API Key Section */}
                 <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: theme.text }]}>OpenAI API Configuration</Text>
-
-                    <View style={[styles.apiKeyContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-                        <View style={styles.apiKeyHeader}>
-                            <Ionicons name="key-outline" size={20} color={theme.primary} />
-                            <Text style={[styles.apiKeyLabel, { color: theme.text }]}>API Key</Text>
-                            <TouchableOpacity onPress={() => setIsApiKeyVisible(!isApiKeyVisible)}>
-                                <Ionicons
-                                    name={isApiKeyVisible ? "eye-off-outline" : "eye-outline"}
-                                    size={20}
-                                    color={theme.textSecondary}
-                                />
-                            </TouchableOpacity>
-                        </View>
-
-                        <TextInput
-                            style={[styles.apiKeyInput, {
-                                backgroundColor: theme.background,
-                                borderColor: theme.border,
-                                color: theme.text
-                            }]}
-                            placeholder="Enter your OpenAI API key"
-                            placeholderTextColor={theme.textSecondary}
-                            value={isApiKeyVisible ? apiKey : apiKey.replace(/./g, '•')}
-                            onChangeText={setApiKey}
-                            secureTextEntry={!isApiKeyVisible}
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                        />
-
-                        <View style={styles.apiKeyActions}>
-                            <TouchableOpacity
-                                style={[styles.apiKeyButton, { backgroundColor: theme.primary }]}
-                                onPress={saveApiKey}
-                                disabled={isLoading}
-                            >
-                                <Text style={styles.apiKeyButtonText}>Save</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={[styles.apiKeyButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
-                                onPress={testApiKey}
-                                disabled={isLoading}
-                            >
-                                <Text style={[styles.apiKeyButtonText, { color: theme.text }]}>Test</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={[styles.apiKeyButton, { backgroundColor: '#ff4444' }]}
-                                onPress={clearApiKey}
-                                disabled={isLoading}
-                            >
-                                <Text style={styles.apiKeyButtonText}>Clear</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-
-                    <Text style={[styles.helpText, { color: theme.textSecondary }]}>
-                        Get your API key from{' '}
-                        <Text style={{ color: theme.primary }}>platform.openai.com</Text>
+                    <Text style={[styles.sectionTitle, { color: theme.text }]}>OpenAI API Key</Text>
+                    <Text style={[styles.sectionDescription, { color: theme.textSecondary }]}>
+                        Enter your OpenAI API key to enable AI features
                     </Text>
+
+                    <TextInput
+                        style={[styles.input, {
+                            backgroundColor: theme.surface,
+                            color: theme.text,
+                            borderColor: theme.border
+                        }]}
+                        placeholder="sk-..."
+                        placeholderTextColor={theme.textSecondary}
+                        value={apiKey}
+                        onChangeText={setApiKey}
+                        secureTextEntry
+                    />
+
+                    <View style={styles.buttonRow}>
+                        <TouchableOpacity
+                            style={[styles.button, { backgroundColor: theme.primary }]}
+                            onPress={saveApiKey}
+                        >
+                            <Text style={styles.buttonText}>Save Key</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.button, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                            onPress={testApiKey}
+                            disabled={isTesting}
+                        >
+                            <Text style={[styles.buttonText, { color: theme.text }]}>
+                                {isTesting ? 'Testing...' : 'Test Key'}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {testResult ? (
+                        <Text style={[styles.testResult, { color: theme.text }]}>{testResult}</Text>
+                    ) : null}
                 </View>
 
-                {/* AI Features Toggle */}
+                {/* Voice Features Info */}
                 <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: theme.text }]}>AI Features</Text>
+                    <Text style={[styles.sectionTitle, { color: theme.text }]}>Voice Features</Text>
+                    <Text style={[styles.sectionDescription, { color: theme.textSecondary }]}>
+                        Voice recognition is available on web browsers that support the Web Speech API. On mobile devices, voice features are being prepared for future updates.
+                    </Text>
 
-                    <View style={[styles.settingItem, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-                        <Ionicons name="bulb-outline" size={24} color={theme.primary} />
-                        <View style={styles.settingContent}>
-                            <Text style={[styles.settingTitle, { color: theme.text }]}>Enable AI Features</Text>
-                            <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
-                                Turn AI features on or off
-                            </Text>
-                        </View>
-                        <Switch
-                            value={isAIFeaturesEnabled}
-                            onValueChange={toggleAIFeatures}
-                            trackColor={{ false: theme.border, true: theme.primary }}
-                            thumbColor={isAIFeaturesEnabled ? '#fff' : theme.textSecondary}
-                        />
+                    <View style={[styles.infoBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                        <Ionicons name="information-circle-outline" size={20} color={theme.primary} />
+                        <Text style={[styles.infoText, { color: theme.textSecondary }]}>
+                            For the best experience, use the quick prompts or type your messages directly.
+                        </Text>
                     </View>
                 </View>
 
-                {/* Other Settings */}
+                {/* Instructions */}
                 <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: theme.text }]}>Preferences</Text>
-
-                    <TouchableOpacity
-                        style={[styles.settingItem, { backgroundColor: theme.surface, borderColor: theme.border }]}
-                        onPress={() => navigation.navigate('Preferences')}
-                    >
-                        <Ionicons name="person-outline" size={24} color={theme.primary} />
-                        <View style={styles.settingContent}>
-                            <Text style={[styles.settingTitle, { color: theme.text }]}>Dietary Preferences</Text>
-                            <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
-                                Set your dietary restrictions and preferences
-                            </Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.settingItem, { backgroundColor: theme.surface, borderColor: theme.border }]}
-                        onPress={() => navigation.navigate('Preferences')}
-                    >
-                        <Ionicons name="restaurant-outline" size={24} color={theme.primary} />
-                        <View style={styles.settingContent}>
-                            <Text style={[styles.settingTitle, { color: theme.text }]}>Cuisine Preferences</Text>
-                            <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
-                                Choose your favorite cuisines
-                            </Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.settingItem, { backgroundColor: theme.surface, borderColor: theme.border }]}
-                        onPress={() => navigation.navigate('Preferences')}
-                    >
-                        <Ionicons name="time-outline" size={24} color={theme.primary} />
-                        <View style={styles.settingContent}>
-                            <Text style={[styles.settingTitle, { color: theme.text }]}>Cooking Time</Text>
-                            <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
-                                Set your preferred cooking time limits
-                            </Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.settingItem, { backgroundColor: theme.surface, borderColor: theme.border }]}
-                        onPress={() => navigation.navigate('Preferences')}
-                    >
-                        <Ionicons name="mic-outline" size={24} color={theme.primary} />
-                        <View style={styles.settingContent}>
-                            <Text style={[styles.settingTitle, { color: theme.text }]}>Voice Commands</Text>
-                            <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
-                                Configure voice input settings
-                            </Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
-                    </TouchableOpacity>
+                    <Text style={[styles.sectionTitle, { color: theme.text }]}>How to Get an API Key</Text>
+                    <Text style={[styles.instructionText, { color: theme.textSecondary }]}>
+                        1. Go to platform.openai.com{'\n'}
+                        2. Sign up or log in{'\n'}
+                        3. Navigate to API Keys{'\n'}
+                        4. Create a new secret key{'\n'}
+                        5. Copy and paste it here
+                    </Text>
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -286,27 +184,13 @@ const styles = StyleSheet.create({
         padding: 20,
         borderBottomWidth: 1,
     },
-    headerCenter: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
     headerTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        marginLeft: 8,
     },
     content: {
         flex: 1,
         padding: 20,
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 8,
-    },
-    subtitle: {
-        fontSize: 16,
-        marginBottom: 30,
     },
     section: {
         marginBottom: 30,
@@ -314,75 +198,57 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 18,
         fontWeight: '600',
-        marginBottom: 15
+        marginBottom: 8,
     },
-    apiKeyContainer: {
-        padding: 16,
-        borderRadius: 12,
-        borderWidth: 1,
-        marginBottom: 10,
+    sectionDescription: {
+        fontSize: 14,
+        marginBottom: 15,
+        lineHeight: 20,
     },
-    apiKeyHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 12
-    },
-    apiKeyLabel: {
-        fontSize: 16,
-        fontWeight: '600',
-        marginLeft: 8,
-        flex: 1
-    },
-    apiKeyInput: {
+    input: {
         borderWidth: 1,
         borderRadius: 8,
         padding: 12,
         fontSize: 16,
-        marginBottom: 12
+        marginBottom: 15,
     },
-    apiKeyActions: {
+    buttonRow: {
         flexDirection: 'row',
-        gap: 10
+        gap: 10,
     },
-    apiKeyButton: {
+    button: {
         flex: 1,
-        paddingVertical: 10,
-        paddingHorizontal: 16,
+        padding: 12,
         borderRadius: 8,
         alignItems: 'center',
-        borderWidth: 1
-    },
-    apiKeyButtonText: {
-        color: '#fff',
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    helpText: {
-        fontSize: 14,
-        textAlign: 'center',
-        lineHeight: 20,
-    },
-    settingsContainer: {
-        gap: 12,
-    },
-    settingItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 16,
-        borderRadius: 12,
         borderWidth: 1,
-        marginBottom: 12,
     },
-    settingContent: {
-        flex: 1,
-        marginLeft: 12,
-    },
-    settingTitle: {
+    buttonText: {
+        color: '#fff',
         fontSize: 16,
         fontWeight: '600',
-        marginBottom: 4,
     },
-    settingSubtitle: {
+    testResult: {
+        marginTop: 10,
         fontSize: 14,
+        fontWeight: '500',
+    },
+    infoBox: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        padding: 15,
+        borderRadius: 8,
+        borderWidth: 1,
+        marginTop: 10,
+    },
+    infoText: {
+        fontSize: 14,
+        lineHeight: 20,
+        marginLeft: 10,
+        flex: 1,
+    },
+    instructionText: {
+        fontSize: 14,
+        lineHeight: 22,
     },
 }); 

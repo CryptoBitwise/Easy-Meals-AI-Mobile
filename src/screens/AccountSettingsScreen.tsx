@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { StorageManager } from '../utils/storage';
 
 interface UserProfile {
     name: string;
@@ -29,12 +30,32 @@ const AccountSettingsScreen = ({ navigation }: any) => {
         location: 'New York, NY',
     });
     const [isEditing, setIsEditing] = useState(false);
+    const [apiKey, setApiKey] = useState('');
+    const [showApiKey, setShowApiKey] = useState(false);
+
+    useEffect(() => {
+        loadApiKey();
+    }, []);
+
+    const loadApiKey = async () => {
+        try {
+            const savedApiKey = await StorageManager.getApiKey();
+            if (savedApiKey) {
+                setApiKey(savedApiKey);
+            }
+        } catch (error) {
+            console.log('Error loading API key:', error);
+        }
+    };
 
     const handleSave = async () => {
         try {
             await AsyncStorage.setItem('user_profile', JSON.stringify(profile));
+            if (apiKey) {
+                await StorageManager.setApiKey(apiKey);
+            }
             setIsEditing(false);
-            Alert.alert('Success', 'Profile updated successfully!');
+            Alert.alert('Success', 'Profile and API key updated successfully!');
         } catch (error) {
             Alert.alert('Error', 'Failed to save profile');
         }
@@ -147,6 +168,49 @@ const AccountSettingsScreen = ({ navigation }: any) => {
                         (text) => setProfile({ ...profile, location: text }),
                         'Enter your location'
                     )}
+                </View>
+
+                {/* API Key Section */}
+                <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                    <Text style={[styles.sectionTitle, { color: theme.primary }]}>AI Settings</Text>
+
+                    <View style={styles.inputContainer}>
+                        <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>OpenAI API Key</Text>
+                        <View style={styles.apiKeyContainer}>
+                            <TextInput
+                                style={[
+                                    styles.textInput,
+                                    {
+                                        backgroundColor: theme.surface,
+                                        borderColor: theme.border,
+                                        color: theme.text,
+                                        flex: 1,
+                                    },
+                                ]}
+                                value={showApiKey ? apiKey : apiKey ? '••••••••••••••••' : ''}
+                                onChangeText={setApiKey}
+                                placeholder="Enter your OpenAI API key"
+                                placeholderTextColor={theme.textSecondary}
+                                secureTextEntry={!showApiKey}
+                                editable={isEditing}
+                            />
+                            {isEditing && apiKey && (
+                                <TouchableOpacity
+                                    style={styles.eyeButton}
+                                    onPress={() => setShowApiKey(!showApiKey)}
+                                >
+                                    <Ionicons
+                                        name={showApiKey ? "eye-off" : "eye"}
+                                        size={20}
+                                        color={theme.textSecondary}
+                                    />
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                        <Text style={[styles.helpText, { color: theme.textTertiary }]}>
+                            Get your API key from platform.openai.com
+                        </Text>
+                    </View>
                 </View>
 
                 {/* Account Actions */}
@@ -305,6 +369,22 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: '600',
+    },
+    apiKeyContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderRadius: 8,
+        paddingHorizontal: 12,
+    },
+    eyeButton: {
+        padding: 8,
+        marginLeft: 8,
+    },
+    helpText: {
+        fontSize: 12,
+        marginTop: 4,
+        fontStyle: 'italic',
     },
 });
 

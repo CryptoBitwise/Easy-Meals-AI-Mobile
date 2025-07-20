@@ -119,7 +119,7 @@ const FavoritesScreen = ({ navigation }: any) => {
     if (loading) {
         return (
             <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-                <LoadingSpinner fullScreen />
+                <LoadingSpinner />
             </SafeAreaView>
         );
     }
@@ -139,7 +139,7 @@ const FavoritesScreen = ({ navigation }: any) => {
                 <EmptyState
                     icon="heart-outline"
                     title="No Favorites Yet"
-                    subtitle="Start exploring recipes and add your favorites here! You'll find all your saved recipes in this section."
+                    message="Start exploring recipes and add your favorites here! You'll find all your saved recipes in this section."
                     actionText="Explore Recipes"
                     onAction={() => navigation.navigate('Search')}
                 />
@@ -148,7 +148,7 @@ const FavoritesScreen = ({ navigation }: any) => {
                     data={favorites}
                     renderItem={renderItem}
                     keyExtractor={(item) => item.id}
-                    contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+                    contentContainerStyle={styles.listContainer}
                     showsVerticalScrollIndicator={false}
                 />
             )}
@@ -159,8 +159,6 @@ const FavoritesScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        paddingTop: 48,
-        paddingHorizontal: 16,
     },
     header: {
         flexDirection: 'row',
@@ -230,6 +228,10 @@ const styles = StyleSheet.create({
         padding: 8,
         borderRadius: 8,
         borderWidth: 1,
+    },
+    listContainer: {
+        padding: 16,
+        paddingBottom: 32,
     },
 });
 

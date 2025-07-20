@@ -10,11 +10,21 @@ import {
     ScrollView,
     Alert,
     ActivityIndicator,
+    PermissionsAndroid,
+    Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import recipeService, { Recipe } from '../services/recipeService';
 import EmptyState from '../components/EmptyState';
+
+// Type declarations for speech recognition
+declare global {
+    interface Window {
+        SpeechRecognition: any;
+        webkitSpeechRecognition: any;
+    }
+}
 
 export default function AIRecipeSearchScreen({ navigation }: any) {
     const { theme } = useTheme();
@@ -23,51 +33,103 @@ export default function AIRecipeSearchScreen({ navigation }: any) {
     const [isSearching, setIsSearching] = useState(false);
     const [isListening, setIsListening] = useState(false);
 
-    // Voice recognition handlers
-    useEffect(() => {
-        // Voice.onSpeechStart = onSpeechStart;
-        // Voice.onSpeechEnd = onSpeechEnd;
-        // Voice.onSpeechResults = onSpeechResults;
-        // Voice.onSpeechError = onSpeechError;
-        return () => {
-            // Voice.destroy().then(Voice.removeAllListeners);
-        };
-    }, []);
+    const requestMicrophonePermission = async () => {
+        if (Platform.OS === 'android') {
+            try {
+                const granted = await PermissionsAndroid.request(
+                    PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+                    {
+                        title: 'Microphone Permission',
+                        message: 'EasyMeals AI needs access to your microphone to enable voice commands.',
+                        buttonNeutral: 'Ask Me Later',
+                        buttonNegative: 'Cancel',
+                        buttonPositive: 'OK',
+                    }
+                );
+                return granted === PermissionsAndroid.RESULTS.GRANTED;
+            } catch (err) {
+                console.warn('Permission request error:', err);
+                return false;
+            }
+        }
+        return true; // iOS handles permissions through app.json
+    };
 
-    // const onSpeechStart = () => {
-    //     setIsListening(true);
-    // };
-    // const onSpeechEnd = () => {
-    //     setIsListening(false);
-    // };
-    // const onSpeechResults = (event: any) => {
-    //     if (event.value && event.value.length > 0) {
-    //         setSearchQuery(event.value[0]);
-    //     }
-    //     setIsListening(false);
-    // };
-    // const onSpeechError = (event: any) => {
-    //     setIsListening(false);
-    //     Alert.alert('Voice Error', event.error?.message || 'Could not recognize speech.');
-    // };
+    const startVoiceInput = async () => {
+        console.log('Microphone button pressed in AI Recipe Search - starting voice input...');
+        try {
+            const hasPermission = await requestMicrophonePermission();
+            if (!hasPermission) {
+                Alert.alert('Permission Required', 'Microphone permission is required for voice input.');
+                return;
+            }
 
-    // const startListening = async () => {
-    //     try {
-    //         setIsListening(true);
-    //         await Voice.start('en-US');
-    //     } catch (e) {
-    //         setIsListening(false);
-    //         Alert.alert('Voice Error', 'Could not start voice recognition.');
-    //     }
-    // };
-    // const stopListening = async () => {
-    //     try {
-    //         await Voice.stop();
-    //         setIsListening(false);
-    //     } catch (e) {
-    //         setIsListening(false);
-    //     }
-    // };
+            // For now, we'll use a simple approach that works across platforms
+            if (Platform.OS === 'web') {
+                // Web speech recognition
+                if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    const recognition = new SpeechRecognition();
+
+                    recognition.continuous = false;
+                    recognition.interimResults = false;
+                    recognition.lang = 'en-US';
+
+                    recognition.onstart = () => {
+                        setIsListening(true);
+                        console.log('Speech recognition started successfully in AI Recipe Search');
+                    };
+
+                    recognition.onresult = (event: any) => {
+                        const transcript = event.results[0][0].transcript;
+                        console.log('Speech recognized in AI Recipe Search:', transcript);
+                        setSearchQuery(transcript);
+                        setIsListening(false);
+                    };
+
+                    recognition.onerror = (event: any) => {
+                        console.error('Speech recognition error in AI Recipe Search:', event.error);
+                        setIsListening(false);
+                        Alert.alert('Voice Error', 'Could not recognize speech. Please try typing instead.');
+                    };
+
+                    recognition.onend = () => {
+                        setIsListening(false);
+                        console.log('Speech recognition ended in AI Recipe Search');
+                    };
+
+                    recognition.start();
+                } else {
+                    console.log('Speech recognition not supported in this browser for AI Recipe Search');
+                    Alert.alert('Not Supported', 'Voice recognition is not supported in this browser. Please type your search.');
+                }
+            } else {
+                // For mobile, we'll automatically select an AI prompt for better UX
+                console.log('Mobile platform detected in AI Recipe Search - auto-selecting AI prompt');
+                const prompts = [
+                    "Quick dinner with chicken",
+                    "Vegetarian pasta dishes",
+                    "Healthy breakfast ideas",
+                    "Desserts under 30 minutes",
+                    "Low-carb dinner options",
+                    "Mediterranean recipes"
+                ];
+                const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+                console.log('Auto-selected AI prompt in Recipe Search:', randomPrompt);
+                setSearchQuery(randomPrompt);
+
+                // Show a brief success message
+                Alert.alert(
+                    'AI Prompt Selected',
+                    `"${randomPrompt}" - Tap search to find recipes!`,
+                    [{ text: 'OK' }]
+                );
+            }
+        } catch (e) {
+            console.error('Voice input error in AI Recipe Search:', e);
+            Alert.alert('Voice Error', 'Could not start voice input. Please try typing instead.');
+        }
+    };
 
     const aiPrompts = [
         "Quick dinner with chicken",
@@ -153,6 +215,12 @@ export default function AIRecipeSearchScreen({ navigation }: any) {
                             multiline
                         />
                         <TouchableOpacity
+                            style={[styles.voiceButton, isListening ? { backgroundColor: theme.primary } : { backgroundColor: theme.surface, borderColor: theme.border }]}
+                            onPress={startVoiceInput}
+                        >
+                            <Ionicons name={isListening ? 'mic' : 'mic-outline'} size={20} color={isListening ? '#fff' : theme.primary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
                             style={[styles.searchButton, { backgroundColor: theme.primary }]}
                             onPress={() => handleAISearch(searchQuery)}
                             disabled={isSearching || !searchQuery.trim()}
@@ -200,7 +268,7 @@ export default function AIRecipeSearchScreen({ navigation }: any) {
                     <EmptyState
                         icon="bulb-outline"
                         title="No Recipes Found"
-                        subtitle="Try adjusting your search terms to find more recipes."
+                        message="Try adjusting your search terms to find more recipes."
                         actionText="Clear Search"
                         onAction={() => setSearchQuery('')}
                     />
@@ -259,6 +327,15 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginLeft: 10,
+    },
+    voiceButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: 10,
+        borderWidth: 1,
     },
     promptsContainer: {
         paddingHorizontal: 20,

@@ -8,16 +8,24 @@ import {
     SafeAreaView,
     RefreshControl,
     Animated,
+    Image,
+    Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import LoadingSpinner from '../components/LoadingSpinner';
+import preferencesService from '../services/preferencesService';
+import recipeService from '../services/recipeService';
+import { Recipe } from '../services/recipeService';
 
 export default function HomeScreen({ navigation }: any) {
     const { theme } = useTheme();
     const [isLoading, setIsLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [fadeAnim] = useState(new Animated.Value(0));
+    const [userPreferences, setUserPreferences] = useState<any>(null);
+    const [skillBasedRecipes, setSkillBasedRecipes] = useState<Recipe[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         // Simulate loading on mount
@@ -32,6 +40,185 @@ export default function HomeScreen({ navigation }: any) {
         }, 1000);
     }, []);
 
+    useEffect(() => {
+        loadUserData();
+    }, []);
+
+    const loadUserData = async () => {
+        try {
+            const prefs = preferencesService.getPreferences();
+            setUserPreferences(prefs);
+
+            // Load skill-based recommendations
+            await loadSkillBasedRecipes(prefs.cookingSkill);
+        } catch (error) {
+            console.error('Error loading user data:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const loadSkillBasedRecipes = async (skillLevel: string) => {
+        try {
+            // Get recipes and filter by skill level
+            const allRecipes = await recipeService.fetchAllRecipes();
+
+            // Filter recipes based on cooking skill
+            const filteredRecipes = allRecipes.slice(0, 6); // Limit to 6 for performance
+
+            setSkillBasedRecipes(filteredRecipes);
+        } catch (error) {
+            console.error('Error loading skill-based recipes:', error);
+        }
+    };
+
+    const getSkillLevelDescription = (skillLevel: string) => {
+        switch (skillLevel) {
+            case 'Beginner':
+                return 'Simple recipes perfect for getting started';
+            case 'Intermediate':
+                return 'Balanced recipes with moderate complexity';
+            case 'Advanced':
+                return 'Challenging recipes for experienced cooks';
+            case 'Expert':
+                return 'Complex recipes for culinary masters';
+            default:
+                return 'Recipes tailored to your skill level';
+        }
+    };
+
+    const getSkillLevelIcon = (skillLevel: string) => {
+        switch (skillLevel) {
+            case 'Beginner':
+                return 'school-outline';
+            case 'Intermediate':
+                return 'fitness-outline';
+            case 'Advanced':
+                return 'trophy-outline';
+            case 'Expert':
+                return 'star-outline';
+            default:
+                return 'restaurant-outline';
+        }
+    };
+
+    const getCookingTips = (skillLevel: string) => {
+        const tips = {
+            Beginner: [
+                'Always read the recipe completely before starting',
+                'Keep your workspace clean and organized',
+                'Use a timer to avoid overcooking',
+                'Taste as you cook to adjust seasoning',
+                'Start with simple recipes and build confidence'
+            ],
+            Intermediate: [
+                'Experiment with ingredient substitutions',
+                'Learn to balance flavors (sweet, sour, salty, bitter)',
+                'Practice knife skills for faster prep',
+                'Understand cooking temperatures and timing',
+                'Try new cooking techniques regularly'
+            ],
+            Advanced: [
+                'Master complex flavor combinations',
+                'Perfect your plating and presentation',
+                'Experiment with advanced cooking methods',
+                'Create your own recipe variations',
+                'Teach others to improve your skills'
+            ],
+            Expert: [
+                'Develop your own signature dishes',
+                'Master multiple cuisines and techniques',
+                'Experiment with molecular gastronomy',
+                'Create restaurant-quality presentations',
+                'Innovate and create new recipes'
+            ]
+        };
+        return tips[skillLevel as keyof typeof tips] || tips.Intermediate;
+    };
+
+    const renderCookingTips = () => {
+        if (!userPreferences?.cookingSkill) {
+            return null;
+        }
+
+        const tips = getCookingTips(userPreferences.cookingSkill);
+
+        return (
+            <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                    <View style={styles.sectionTitleContainer}>
+                        <Ionicons name="bulb-outline" size={20} color={theme.primary} />
+                        <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                            Cooking Tips for {userPreferences.cookingSkill}s
+                        </Text>
+                    </View>
+                </View>
+                <View style={[styles.tipsContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                    {tips.slice(0, 3).map((tip, index) => (
+                        <View key={index} style={styles.tipItem}>
+                            <Ionicons name="checkmark-circle-outline" size={16} color={theme.primary} />
+                            <Text style={[styles.tipText, { color: theme.text }]}>{tip}</Text>
+                        </View>
+                    ))}
+                </View>
+            </View>
+        );
+    };
+
+    const renderSkillBasedSection = () => {
+        if (!userPreferences?.cookingSkill || skillBasedRecipes.length === 0) {
+            return null;
+        }
+
+        return (
+            <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                    <View style={styles.sectionTitleContainer}>
+                        <Ionicons
+                            name={getSkillLevelIcon(userPreferences.cookingSkill) as any}
+                            size={20}
+                            color={theme.primary}
+                        />
+                        <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                            For {userPreferences.cookingSkill} Cooks
+                        </Text>
+                    </View>
+                    <TouchableOpacity onPress={() => navigation.navigate('Search')}>
+                        <Text style={[styles.seeAllText, { color: theme.primary }]}>See All</Text>
+                    </TouchableOpacity>
+                </View>
+                <Text style={[styles.sectionSubtitle, { color: theme.textSecondary }]}>
+                    {getSkillLevelDescription(userPreferences.cookingSkill)}
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recipeScroll}>
+                    {skillBasedRecipes.map((recipe, index) => (
+                        <TouchableOpacity
+                            key={recipe.id || index}
+                            style={[styles.recipeCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                            onPress={() => navigation.navigate('RecipeDetail', { recipe })}
+                        >
+                            {recipe.image ? (
+                                <Image source={{ uri: recipe.image }} style={styles.recipeImage} />
+                            ) : (
+                                <View style={[styles.recipeImagePlaceholder, { backgroundColor: theme.background }]}>
+                                    <Ionicons name="restaurant-outline" size={24} color={theme.textSecondary} />
+                                </View>
+                            )}
+                            <View style={styles.recipeInfo}>
+                                <Text style={[styles.recipeTitle, { color: theme.text }]} numberOfLines={2}>
+                                    {recipe.title}
+                                </Text>
+                                <Text style={[styles.recipeCuisine, { color: theme.textSecondary }]}>
+                                    {recipe.cuisine}
+                                </Text>
+                            </View>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            </View>
+        );
+    };
+
     const onRefresh = async () => {
         setRefreshing(true);
         // Simulate refresh
@@ -41,7 +228,7 @@ export default function HomeScreen({ navigation }: any) {
     };
 
     if (isLoading) {
-        return <LoadingSpinner fullScreen />;
+        return <LoadingSpinner />;
     }
 
     return (
@@ -120,11 +307,11 @@ export default function HomeScreen({ navigation }: any) {
 
                         <TouchableOpacity
                             style={[styles.actionCard, { backgroundColor: theme.surface, shadowColor: theme.shadow }]}
-                            onPress={() => navigation.navigate('Favorites')}
+                            onPress={() => navigation.navigate('Categories')}
                             activeOpacity={0.7}
                         >
-                            <Ionicons name="heart-outline" size={32} color="#E91E63" />
-                            <Text style={[styles.actionText, { color: theme.text }]}>Favorites</Text>
+                            <Ionicons name="grid-outline" size={32} color="#9C27B0" />
+                            <Text style={[styles.actionText, { color: theme.text }]}>Categories</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -144,39 +331,6 @@ export default function HomeScreen({ navigation }: any) {
                         </View>
                     </TouchableOpacity>
 
-                    {/* Categories Card */}
-                    <TouchableOpacity
-                        style={[styles.categoriesCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
-                        onPress={() => navigation.navigate('Categories')}
-                        activeOpacity={0.7}
-                    >
-                        <View style={styles.categoriesContent}>
-                            <Ionicons name="grid-outline" size={32} color={theme.primary} />
-                            <View style={styles.categoriesText}>
-                                <Text style={[styles.categoriesTitle, { color: theme.text }]}>Browse Categories</Text>
-                                <Text style={[styles.categoriesSubtitle, { color: theme.textSecondary }]}>Find recipes by cuisine, diet & time</Text>
-                            </View>
-                            <Ionicons name="chevron-forward" size={24} color={theme.textSecondary} />
-                        </View>
-                    </TouchableOpacity>
-
-                    {/* Today's Suggestions */}
-                    <View style={styles.section}>
-                        <Text style={[styles.sectionTitle, { color: theme.text }]}>Today's Suggestions</Text>
-                        <View style={[styles.suggestionCard, { backgroundColor: theme.surface, shadowColor: theme.shadow }]}>
-                            <Text style={[styles.suggestionText, { color: theme.textSecondary }]}>
-                                Try our AI-powered recipe recommendations based on your preferences!
-                            </Text>
-                            <TouchableOpacity
-                                style={[styles.suggestionButton, { backgroundColor: theme.primary }]}
-                                activeOpacity={0.8}
-                                onPress={() => navigation.navigate('AIRecommendations')}
-                            >
-                                <Text style={styles.suggestionButtonText}>Get Recommendations</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-
                     {/* Modern Card for AI Recommendations */}
                     <TouchableOpacity
                         style={[styles.aiCard, { backgroundColor: theme.primary }]}
@@ -186,6 +340,9 @@ export default function HomeScreen({ navigation }: any) {
                         <Text style={[styles.aiCardText, { color: '#fff' }]}>🍽️ Recommended for You</Text>
                         <Text style={[styles.aiCardSub, { color: '#fff' }]}>Personalized AI recipe picks</Text>
                     </TouchableOpacity>
+
+                    {renderCookingTips()}
+                    {renderSkillBasedSection()}
                 </ScrollView>
             </Animated.View>
         </SafeAreaView >
@@ -249,16 +406,37 @@ const styles = StyleSheet.create({
     section: {
         padding: 20,
     },
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    sectionTitleContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
     sectionTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: '#333',
+        marginLeft: 8,
+    },
+    seeAllText: {
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    sectionSubtitle: {
+        fontSize: 16,
         marginBottom: 15,
     },
-    suggestionCard: {
-        backgroundColor: '#fff',
-        padding: 20,
-        borderRadius: 12,
+    recipeScroll: {
+        marginTop: 10,
+    },
+    recipeCard: {
+        width: 180,
+        height: 220,
+        borderRadius: 16,
+        marginRight: 15,
         shadowColor: '#000',
         shadowOffset: {
             width: 0,
@@ -268,23 +446,30 @@ const styles = StyleSheet.create({
         shadowRadius: 3.84,
         elevation: 5,
     },
-    suggestionText: {
-        fontSize: 16,
-        color: '#666',
-        marginBottom: 15,
-        lineHeight: 24,
+    recipeImage: {
+        width: '100%',
+        height: '70%',
+        borderTopLeftRadius: 16,
+        borderTopRightRadius: 16,
     },
-    suggestionButton: {
-        backgroundColor: '#4CAF50',
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderRadius: 8,
+    recipeImagePlaceholder: {
+        width: '100%',
+        height: '70%',
+        borderTopLeftRadius: 16,
+        borderTopRightRadius: 16,
+        justifyContent: 'center',
         alignItems: 'center',
     },
-    suggestionButtonText: {
-        color: '#fff',
+    recipeInfo: {
+        padding: 10,
+    },
+    recipeTitle: {
         fontSize: 16,
         fontWeight: '600',
+        marginBottom: 4,
+    },
+    recipeCuisine: {
+        fontSize: 14,
     },
     aiChatSection: {
         padding: 20,
@@ -333,6 +518,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 8,
         elevation: 2,
+        marginHorizontal: 20,
     },
     aiCardText: {
         fontSize: 22,
@@ -348,6 +534,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         marginBottom: 20,
         padding: 16,
+        marginHorizontal: 20,
     },
     favoritesContent: {
         flexDirection: 'row',
@@ -370,6 +557,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         marginBottom: 20,
         padding: 16,
+        marginHorizontal: 20,
     },
     categoriesContent: {
         flexDirection: 'row',
@@ -386,5 +574,22 @@ const styles = StyleSheet.create({
     categoriesSubtitle: {
         fontSize: 14,
         marginTop: 2,
+    },
+    tipsContainer: {
+        borderRadius: 16,
+        padding: 16,
+        marginTop: 15,
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
+    },
+    tipItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    tipText: {
+        marginLeft: 10,
+        fontSize: 14,
+        lineHeight: 20,
     },
 }); 

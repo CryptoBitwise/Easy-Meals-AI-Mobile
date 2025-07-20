@@ -10,6 +10,7 @@ import {
     ScrollView,
     Alert,
     ActivityIndicator,
+    Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -170,8 +171,16 @@ export default function SearchScreen({ navigation }: any) {
             activeOpacity={0.8}
         >
             {item.image ? (
-                <Text style={styles.recipeEmoji}>{item.image}</Text>
-            ) : null}
+                <Image
+                    source={{ uri: item.image }}
+                    style={styles.recipeImage}
+                    resizeMode="cover"
+                />
+            ) : (
+                <View style={[styles.recipeImagePlaceholder, { backgroundColor: theme.background }]}>
+                    <Ionicons name="restaurant-outline" size={24} color={theme.textSecondary} />
+                </View>
+            )}
             <View style={styles.recipeInfo}>
                 <Text style={[styles.recipeTitle, { color: theme.text }]}>{item.title}</Text>
                 <View style={styles.recipeMeta}>
@@ -191,19 +200,41 @@ export default function SearchScreen({ navigation }: any) {
     );
 
     if (isLoading) {
-        return <LoadingSpinner fullScreen />;
+        return <LoadingSpinner />;
     }
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
-            <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+            {/* Header */}
+            <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+                <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={() => navigation.goBack()}
+                    accessibilityLabel="Go back"
+                >
+                    <Ionicons name="arrow-back" size={24} color={theme.text} />
+                </TouchableOpacity>
+                <Text style={[styles.headerTitle, { color: theme.text }]}>Search Recipes</Text>
+                <View style={{ width: 24 }} />
+            </View>
+
+            {/* Search Input */}
+            <View style={styles.searchContainer}>
                 <TextInput
-                    style={[styles.searchInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.surface }]}
+                    style={[styles.searchInput, {
+                        color: theme.text,
+                        borderColor: theme.border,
+                        backgroundColor: theme.surface
+                    }]}
                     placeholder="Search recipes..."
                     value={searchQuery}
                     onChangeText={handleSearch}
                     placeholderTextColor={theme.textSecondary}
                 />
+            </View>
+
+            {/* Content */}
+            <View style={styles.content}>
                 {searchQuery.trim() !== '' ? (
                     <View style={styles.resultsSection}>
                         <View style={styles.resultsHeader}>
@@ -216,7 +247,7 @@ export default function SearchScreen({ navigation }: any) {
                             <EmptyState
                                 icon="search-outline"
                                 title="No Recipes Found"
-                                subtitle="Try adjusting your search terms or filters to find more recipes."
+                                message="Try adjusting your search terms or filters to find more recipes."
                                 actionText="Clear Search"
                                 onAction={() => setSearchQuery('')}
                             />
@@ -225,16 +256,15 @@ export default function SearchScreen({ navigation }: any) {
                                 data={filteredRecipes}
                                 renderItem={renderRecipeItem}
                                 keyExtractor={(item) => item.id}
-                                scrollEnabled={false}
                                 showsVerticalScrollIndicator={false}
+                                contentContainerStyle={styles.recipeList}
                             />
                         )}
                     </View>
                 ) : (
-                    // Optionally render search history here
-                    null
+                    renderSearchHistory()
                 )}
-            </ScrollView>
+            </View>
         </SafeAreaView>
     );
 }
@@ -250,61 +280,24 @@ const styles = StyleSheet.create({
         padding: 20,
         borderBottomWidth: 1,
     },
+    backButton: {
+        padding: 8, // Larger touch target
+        marginLeft: -8, // Compensate for padding
+    },
     headerTitle: {
         fontSize: 20,
         fontWeight: 'bold',
     },
     searchContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderRadius: 12,
-        paddingHorizontal: 15,
-        paddingVertical: 12,
-        borderWidth: 1,
-        marginBottom: 12,
-    },
-    searchIcon: {
-        marginRight: 10,
+        padding: 20,
+        paddingBottom: 10,
     },
     searchInput: {
         flex: 1,
         fontSize: 16,
-    },
-    filterButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 8,
-        alignSelf: 'flex-start',
-    },
-    filtersContainer: {
-        padding: 20,
-        borderBottomWidth: 1,
-    },
-    filtersHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    filtersTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    filtersList: {
-        paddingRight: 20,
-    },
-    filterChip: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 16,
+        padding: 15,
+        borderRadius: 12,
         borderWidth: 1,
-        marginRight: 8,
-    },
-    filterChipText: {
-        fontSize: 14,
-        fontWeight: '500',
     },
     content: {
         flex: 1,
@@ -325,15 +318,14 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         marginBottom: 8,
         borderWidth: 1,
-        borderColor: 'transparent', // Ensure no border when background is set
+        borderColor: 'transparent',
     },
     historyText: {
         marginLeft: 8,
         fontSize: 16,
     },
     recipeList: {
-        flex: 1,
-        paddingHorizontal: 20,
+        paddingBottom: 20,
     },
     recipeCard: {
         flexDirection: 'row',
@@ -346,6 +338,12 @@ const styles = StyleSheet.create({
         elevation: 5,
     },
     recipeImage: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        marginRight: 15,
+    },
+    recipeImagePlaceholder: {
         width: 50,
         height: 50,
         borderRadius: 25,
@@ -396,7 +394,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     resultsSection: {
-        marginTop: 20,
+        flex: 1,
     },
     resultsHeader: {
         flexDirection: 'row',
@@ -439,5 +437,16 @@ const styles = StyleSheet.create({
     },
     filtersSection: {
         marginBottom: 20,
+    },
+    filterChip: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+        borderWidth: 1,
+        marginRight: 8,
+    },
+    filterChipText: {
+        fontSize: 14,
+        fontWeight: '500',
     },
 }); 

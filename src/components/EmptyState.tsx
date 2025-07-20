@@ -6,17 +6,17 @@ import { useTheme } from '../context/ThemeContext';
 interface EmptyStateProps {
     icon: string;
     title: string;
-    subtitle: string;
+    message: string;
     actionText?: string;
     onAction?: () => void;
 }
 
-const EmptyState: React.FC<EmptyStateProps> = ({
+const EmptyState: React.FC<EmptyStateProps> = React.memo(({
     icon,
     title,
-    subtitle,
+    message,
     actionText,
-    onAction,
+    onAction
 }) => {
     const { theme } = useTheme();
 
@@ -27,44 +27,43 @@ const EmptyState: React.FC<EmptyStateProps> = ({
             </View>
 
             <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
-            <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-                {subtitle}
-            </Text>
+            <Text style={[styles.message, { color: theme.textSecondary }]}>{message}</Text>
 
             {actionText && onAction && (
                 <TouchableOpacity
                     style={[styles.actionButton, { backgroundColor: theme.primary }]}
                     onPress={onAction}
+                    activeOpacity={0.8}
                 >
-                    <Text style={styles.actionText}>{actionText}</Text>
+                    <Text style={[styles.actionText, { color: '#fff' }]}>{actionText}</Text>
                 </TouchableOpacity>
             )}
         </View>
     );
-};
+});
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        alignItems: 'center',
         justifyContent: 'center',
+        alignItems: 'center',
         paddingHorizontal: 32,
     },
     iconContainer: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        alignItems: 'center',
+        width: 80,
+        height: 80,
+        borderRadius: 40,
         justifyContent: 'center',
+        alignItems: 'center',
         marginBottom: 24,
     },
     title: {
         fontSize: 24,
         fontWeight: 'bold',
         textAlign: 'center',
-        marginBottom: 8,
+        marginBottom: 12,
     },
-    subtitle: {
+    message: {
         fontSize: 16,
         textAlign: 'center',
         lineHeight: 24,
@@ -74,12 +73,15 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
         paddingVertical: 12,
         borderRadius: 8,
+        minWidth: 120,
     },
     actionText: {
-        color: '#fff',
         fontSize: 16,
         fontWeight: '600',
+        textAlign: 'center',
     },
 });
+
+EmptyState.displayName = 'EmptyState';
 
 export default EmptyState; 

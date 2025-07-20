@@ -28,8 +28,11 @@ import CategoriesScreen from './src/screens/CategoriesScreen';
 import CategoryRecipesScreen from './src/screens/CategoryRecipesScreen';
 import PreferencesScreen from './src/screens/PreferencesScreen';
 import AccountSettingsScreen from './src/screens/AccountSettingsScreen';
+import RecipeImportScreen from './src/screens/RecipeImportScreen';
 
 const Stack = createStackNavigator();
+
+
 
 export default function App() {
   return (
@@ -41,6 +44,8 @@ export default function App() {
             initialRouteName="Intro"
             screenOptions={{
               headerShown: false,
+              gestureEnabled: true,
+
             }}
           >
             <Stack.Screen name="Intro" component={IntroScreen} />
@@ -65,6 +70,7 @@ export default function App() {
             <Stack.Screen name="CategoryRecipes" component={CategoryRecipesScreen} />
             <Stack.Screen name="Preferences" component={PreferencesScreen} />
             <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
+            <Stack.Screen name="RecipeImport" component={RecipeImportScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </ThemeProvider>

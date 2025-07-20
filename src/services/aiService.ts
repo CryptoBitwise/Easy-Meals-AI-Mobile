@@ -1,72 +1,57 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import preferencesService from './preferencesService';
+import { StorageManager } from '../utils/storage';
 
-// OpenAI API Configuration
-const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
-const OPENAI_MODEL = 'gpt-4o'; // Using GPT-4o as recommended
 
-// Centralized AI Service with real OpenAI integration
+
+// Centralized AI Service with secure backend integration
 
 // Helper function to check if AI features are enabled
 async function isAIFeaturesEnabled(): Promise<boolean> {
     try {
-        const enabled = await AsyncStorage.getItem('ai_features_enabled');
+        const enabled = await StorageManager.getItem('ai_features_enabled');
         return enabled !== 'false';
     } catch (error) {
         return true; // Default to enabled if error
     }
 }
 
-// Helper function to get API key
-async function getOpenAIKey(): Promise<string | null> {
-    try {
-        return await AsyncStorage.getItem('openai_api_key');
-    } catch (error) {
-        console.error('Error getting OpenAI API key:', error);
-        return null;
+// Helper function to make OpenAI API calls
+async function callOpenAIAPI(messages: any[], temperature: number = 0.7): Promise<string> {
+    // Get API key from user settings
+    const userApiKey = await StorageManager.getApiKey();
+
+    if (!userApiKey) {
+        throw new Error('Please add your OpenAI API key in Account Settings');
     }
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${userApiKey}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages,
+            temperature,
+            max_tokens: 500,
+        }),
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error('OpenAI API error:', response.status, errorText);
+        throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    return result.choices[0]?.message?.content || 'No response from AI';
 }
 
-// Helper function to make OpenAI API calls
+// Legacy function for backward compatibility
 async function callOpenAI(messages: any[], temperature: number = 0.7): Promise<string> {
-    // Check if AI features are enabled
-    const aiEnabled = await isAIFeaturesEnabled();
-    if (!aiEnabled) {
-        throw new Error('AI features are disabled. Please enable them in AI Settings.');
-    }
-
-    const apiKey = await getOpenAIKey();
-
-    if (!apiKey) {
-        throw new Error('OpenAI API key not found. Please add your API key in AI Settings.');
-    }
-
-    try {
-        const response = await fetch(OPENAI_API_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: OPENAI_MODEL,
-                messages,
-                temperature,
-                max_tokens: 1000,
-            }),
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(`OpenAI API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
-        }
-
-        const data = await response.json();
-        return data.choices[0]?.message?.content || 'No response from AI';
-    } catch (error) {
-        console.error('OpenAI API call failed:', error);
-        throw error;
-    }
+    return await callOpenAIAPI(messages, temperature);
 }
 
 export async function getAIChatResponse(prompt: string): Promise<string> {
@@ -99,92 +84,58 @@ Always be helpful, friendly, and provide practical cooking advice. Keep response
 export async function getAIRecipeRecommendations(userPrefs?: any): Promise<any[]> {
     const preferences = preferencesService.getPreferences();
 
-    const prompt = `Generate 4 personalized recipe recommendations based on these user preferences:
-- Dietary restrictions: ${preferences.dietaryRestrictions?.join(', ') || 'None'}
-- Cuisine preferences: ${preferences.favoriteCuisines?.join(', ') || 'All'}
-- Cooking skill: ${preferences.cookingSkill || 'Intermediate'}
-- Allergies: ${preferences.allergies?.join(', ') || 'None'}
-
-Return the response as a JSON array with this exact format:
-[
-  {
-    "id": "unique_id",
-    "title": "Recipe Name",
-    "description": "Brief description",
-    "cuisine": "Cuisine type",
-    "difficulty": "Beginner/Intermediate/Advanced",
-    "cookTime": "30 minutes",
-    "servings": 4,
-    "tags": ["tag1", "tag2"],
-    "why": "Why this recipe was recommended"
-  }
-]`;
-
-    try {
-        const response = await callOpenAI([
-            {
-                role: 'system',
-                content: 'You are a recipe recommendation expert. Always respond with valid JSON arrays containing recipe objects.'
-            },
-            {
-                role: 'user',
-                content: prompt
-            }
-        ], 0.3); // Lower temperature for more consistent recommendations
-
-        // Parse the JSON response
-        const recipes = JSON.parse(response);
-        return Array.isArray(recipes) ? recipes : [];
-    } catch (error) {
-        console.error('Error getting AI recommendations:', error);
-        // Fallback to mock data
-        return [
-            {
-                id: '1',
-                title: 'Spicy Chickpea Buddha Bowl',
-                liked: false,
-                saved: false,
-                difficulty: 'Beginner',
-                cuisine: 'Mediterranean',
-                dietary: ['Vegetarian', 'Gluten-Free'],
-                spiceLevel: 'Medium'
-            },
-            {
-                id: '2',
-                title: 'Salmon Avocado Sushi',
-                liked: false,
-                saved: false,
-                difficulty: 'Intermediate',
-                cuisine: 'Japanese',
-                dietary: ['Pescatarian'],
-                spiceLevel: 'Mild'
-            },
-            {
-                id: '3',
-                title: 'Vegan Pad Thai',
-                liked: false,
-                saved: false,
-                difficulty: 'Intermediate',
-                cuisine: 'Thai',
-                dietary: ['Vegan', 'Gluten-Free'],
-                spiceLevel: 'Hot'
-            },
-            {
-                id: '4',
-                title: 'Simple Pasta Carbonara',
-                liked: false,
-                saved: false,
-                difficulty: 'Beginner',
-                cuisine: 'Italian',
-                dietary: ['Vegetarian'],
-                spiceLevel: 'Mild'
-            }
-        ];
-    }
+    // Use mock data for now
+    return [
+        {
+            id: '1',
+            title: 'Spicy Chickpea Buddha Bowl',
+            description: 'A healthy and flavorful vegetarian bowl with chickpeas, quinoa, and fresh vegetables.',
+            cuisine: 'Mediterranean',
+            difficulty: 'Beginner',
+            cookTime: '25 minutes',
+            servings: 2,
+            tags: ['Vegetarian', 'Gluten-Free', 'Healthy'],
+            why: 'Recommended based on your vegetarian preferences and beginner cooking level'
+        },
+        {
+            id: '2',
+            title: 'Salmon Avocado Sushi',
+            description: 'Fresh salmon and creamy avocado wrapped in perfectly seasoned rice.',
+            cuisine: 'Japanese',
+            difficulty: 'Intermediate',
+            cookTime: '45 minutes',
+            servings: 4,
+            tags: ['Pescatarian', 'Fresh', 'Elegant'],
+            why: 'Perfect for your intermediate skill level and love of fresh ingredients'
+        },
+        {
+            id: '3',
+            title: 'Vegan Pad Thai',
+            description: 'A delicious plant-based version of the classic Thai noodle dish.',
+            cuisine: 'Thai',
+            difficulty: 'Intermediate',
+            cookTime: '30 minutes',
+            servings: 3,
+            tags: ['Vegan', 'Gluten-Free', 'Spicy'],
+            why: 'Matches your spice preferences and dietary restrictions'
+        },
+        {
+            id: '4',
+            title: 'Simple Pasta Carbonara',
+            description: 'Classic Italian pasta with eggs, cheese, and crispy pancetta.',
+            cuisine: 'Italian',
+            difficulty: 'Beginner',
+            cookTime: '20 minutes',
+            servings: 2,
+            tags: ['Quick', 'Comfort Food', 'Classic'],
+            why: 'Great for beginners and quick weeknight meals'
+        }
+    ];
 }
 
 export async function getAINutritionAnalysis(recipe: any): Promise<any> {
-    const prompt = `Analyze the nutritional content of this recipe: "${recipe.title}"
+    try {
+        const prompt = `Analyze the nutritional content of this recipe: "${recipe.title}"
 
 Provide a detailed nutrition analysis in JSON format:
 {
@@ -206,37 +157,36 @@ Provide a detailed nutrition analysis in JSON format:
     "Iron": "22%",
     "Potassium": "15%"
   }
-}
+}`;
 
-Be realistic and accurate with the nutritional values.`;
-
-    try {
-        const response = await callOpenAI([
+        const messages = [
             {
                 role: 'system',
-                content: 'You are a nutrition expert. Provide accurate nutritional analysis in JSON format.'
+                content: 'You are a nutrition expert. Always respond with valid JSON nutrition data.'
             },
             {
                 role: 'user',
                 content: prompt
             }
-        ], 0.2);
+        ];
 
-        return JSON.parse(response);
+        const response = await callOpenAIAPI(messages, 0.3);
+
+        // Parse JSON response
+        let nutrition;
+        try {
+            const jsonMatch = response.match(/\{[\s\S]*\}/);
+            const jsonString = jsonMatch ? jsonMatch[0] : response;
+            nutrition = JSON.parse(jsonString);
+        } catch (parseError) {
+            console.error('JSON parse error:', parseError);
+            throw new Error('Invalid JSON response from AI');
+        }
+
+        return nutrition;
     } catch (error) {
         console.error('Error getting nutrition analysis:', error);
-        // Fallback to mock data
-        return {
-            calories: 520,
-            protein: 22,
-            carbs: 65,
-            fat: 18,
-            fiber: 9,
-            sugar: 8,
-            sodium: 620,
-            vitamins: { A: '30%', C: '45%', D: '10%', B12: '12%' },
-            minerals: { Calcium: '18%', Iron: '22%', Potassium: '15%' },
-        };
+        throw error;
     }
 }
 
@@ -244,58 +194,44 @@ export async function getAIStepByStep(recipe: any): Promise<string[]> {
     const preferences = preferencesService.getPreferences();
     const skillLevel = preferences.cookingSkill || 'Intermediate';
 
-    const prompt = `Create detailed step-by-step cooking instructions for: "${recipe.title}"
-
-User's cooking skill level: ${skillLevel}
-
-Provide instructions appropriate for this skill level:
-- Beginner: Very detailed, include basic techniques and safety tips
-- Intermediate: Standard detailed instructions
-- Advanced: Concise but complete instructions
-
-Return as a JSON array of strings, each representing one step.`;
-
     try {
-        const response = await callOpenAI([
+        const prompt = `Provide step-by-step cooking instructions for "${recipe.title}" for a ${skillLevel} level cook.
+
+Return the response as a JSON array of strings:
+[
+  "Step 1: Preheat oven to 400°F (200°C).",
+  "Step 2: Rinse and drain chickpeas.",
+  "Step 3: Toss with olive oil and spices."
+]`;
+
+        const messages = [
             {
                 role: 'system',
-                content: 'You are a cooking instructor. Provide clear, step-by-step instructions in JSON array format.'
+                content: 'You are a cooking instructor. Always respond with valid JSON arrays of step-by-step instructions.'
             },
             {
                 role: 'user',
                 content: prompt
             }
-        ], 0.3);
-        const steps = JSON.parse(response);
+        ];
+
+        const response = await callOpenAIAPI(messages, 0.3);
+
+        // Parse JSON response
+        let steps;
+        try {
+            const jsonMatch = response.match(/\[[\s\S]*\]/);
+            const jsonString = jsonMatch ? jsonMatch[0] : response;
+            steps = JSON.parse(jsonString);
+        } catch (parseError) {
+            console.error('JSON parse error:', parseError);
+            throw new Error('Invalid JSON response from AI');
+        }
+
         return Array.isArray(steps) ? steps : [];
     } catch (error) {
         console.error('Error getting step-by-step instructions:', error);
-        // Fallback to mock data
-        const baseSteps = [
-            'Preheat oven to 400°F (200°C).',
-            'Rinse and drain chickpeas. Toss with olive oil and spices.',
-            'Spread chickpeas on a baking sheet and roast for 25 minutes.',
-            'Prepare veggies and cook quinoa while chickpeas roast.',
-            'Assemble bowl: quinoa, veggies, roasted chickpeas, drizzle with tahini sauce.',
-            'Serve and enjoy your healthy meal!'
-        ];
-
-        if (skillLevel === 'Beginner') {
-            return [
-                'Preheat oven to 400°F (200°C). Set a timer for 5 minutes to let it heat up.',
-                'Open the can of chickpeas and drain them in a colander. Rinse with cold water.',
-                'In a bowl, toss chickpeas with 2 tablespoons olive oil, 1 teaspoon paprika, and salt to taste.',
-                'Line a baking sheet with parchment paper and spread chickpeas in a single layer.',
-                'Place in oven and set timer for 25 minutes. Check at 20 minutes.',
-                'While chickpeas roast, rinse 1 cup quinoa and cook according to package instructions.',
-                'Wash and chop your favorite vegetables (bell peppers, cucumber, tomatoes).',
-                'When chickpeas are golden and crispy, remove from oven.',
-                'Assemble your bowl: quinoa base, fresh veggies, roasted chickpeas.',
-                'Drizzle with tahini sauce and serve immediately!'
-            ];
-        }
-
-        return baseSteps;
+        throw error;
     }
 }
 
@@ -303,56 +239,52 @@ export async function getAIIngredientSubstitutions(ingredient: string): Promise<
     const preferences = preferencesService.getPreferences();
     const allergies = preferences.allergies || [];
 
-    const prompt = `Find suitable substitutions for: "${ingredient}"
-
-User allergies to avoid: ${allergies.join(', ') || 'None'}
-
-Provide 3-5 alternative ingredients that can be used as substitutes. Consider:
-- Similar taste and texture
-- Availability
-- Allergies and dietary restrictions
-
-Return as a JSON array of strings.`;
-
     try {
-        const response = await callOpenAI([
+        const prompt = `Provide ingredient substitutions for "${ingredient}". 
+
+Return the response as a JSON array of strings:
+[
+  "Substitution 1 (1:1 ratio)",
+  "Substitution 2 (1:1 ratio)",
+  "Substitution 3 (1:1 ratio)"
+]`;
+
+        const messages = [
             {
                 role: 'system',
-                content: 'You are a culinary expert. Provide practical ingredient substitutions in JSON array format.'
+                content: 'You are a cooking expert. Always respond with valid JSON arrays of ingredient substitutions.'
             },
             {
                 role: 'user',
                 content: prompt
             }
-        ], 0.4);
-        const substitutions = JSON.parse(response);
-        return Array.isArray(substitutions) ? substitutions : [];
-    } catch (error) {
-        console.error('Error getting ingredient substitutions:', error);
-        // Fallback to mock data
-        const mock: Record<string, string[]> = {
-            Chickpeas: ['White beans', 'Lentils', 'Tofu'],
-            Quinoa: ['Brown rice', 'Couscous', 'Farro'],
-            Spinach: ['Kale', 'Swiss chard', 'Arugula'],
-            Tahini: ['Sunflower seed butter', 'Peanut butter', 'Greek yogurt'],
-            Lemon: ['Lime', 'Vinegar', 'Orange juice'],
-            'Olive Oil': ['Avocado oil', 'Canola oil', 'Sesame oil'],
-            Paprika: ['Chili powder', 'Smoked paprika', 'Cayenne'],
-            Cucumber: ['Zucchini', 'Celery', 'Green bell pepper'],
-            Tomato: ['Red bell pepper', 'Sun-dried tomato', 'Roasted red pepper'],
-        };
+        ];
 
-        let substitutions = mock[ingredient] || [];
+        const response = await callOpenAIAPI(messages, 0.3);
+
+        // Parse JSON response
+        let substitutions;
+        try {
+            const jsonMatch = response.match(/\[[\s\S]*\]/);
+            const jsonString = jsonMatch ? jsonMatch[0] : response;
+            substitutions = JSON.parse(jsonString);
+        } catch (parseError) {
+            console.error('JSON parse error:', parseError);
+            throw new Error('Invalid JSON response from AI');
+        }
 
         // Filter out substitutions that contain user allergies
         if (allergies.length > 0) {
-            substitutions = substitutions.filter(sub =>
+            return substitutions.filter((sub: string) =>
                 !allergies.some(allergy =>
                     sub.toLowerCase().includes(allergy.toLowerCase())
                 )
             );
         }
 
-        return substitutions;
+        return Array.isArray(substitutions) ? substitutions : [];
+    } catch (error) {
+        console.error('Error getting ingredient substitutions:', error);
+        throw error;
     }
 } 

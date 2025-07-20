@@ -1,47 +1,47 @@
 import React from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
 interface LoadingSpinnerProps {
     size?: 'small' | 'large';
-    color?: string;
-    fullScreen?: boolean;
+    message?: string;
 }
 
-const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
+const LoadingSpinner: React.FC<LoadingSpinnerProps> = React.memo(({
     size = 'large',
-    color,
-    fullScreen = false
+    message = 'Loading...'
 }) => {
     const { theme } = useTheme();
-    const spinnerColor = color || theme.primary;
-
-    if (fullScreen) {
-        return (
-            <View style={[styles.fullScreen, { backgroundColor: theme.background }]}>
-                <ActivityIndicator size={size} color={spinnerColor} />
-            </View>
-        );
-    }
 
     return (
-        <View style={styles.container}>
-            <ActivityIndicator size={size} color={spinnerColor} />
+        <View style={[styles.container, { backgroundColor: theme.background }]}>
+            <ActivityIndicator size={size} color={theme.primary} />
+            {message && (
+                <View style={styles.messageContainer}>
+                    <Text style={[styles.message, { color: theme.textSecondary }]}>
+                        {message}
+                    </Text>
+                </View>
+            )}
         </View>
     );
-};
+});
 
 const styles = StyleSheet.create({
     container: {
-        padding: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    fullScreen: {
         flex: 1,
-        alignItems: 'center',
         justifyContent: 'center',
+        alignItems: 'center',
+    },
+    messageContainer: {
+        marginTop: 16,
+    },
+    message: {
+        fontSize: 16,
+        textAlign: 'center',
     },
 });
+
+LoadingSpinner.displayName = 'LoadingSpinner';
 
 export default LoadingSpinner; 

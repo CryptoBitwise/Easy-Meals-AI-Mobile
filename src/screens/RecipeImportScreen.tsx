@@ -244,49 +244,49 @@ export default function RecipeImportScreen({ navigation }: any) {
 
                     <View style={styles.section}>
                         <Text style={[styles.sectionTitle, { color: theme.text }]}>Ingredients *</Text>
-                        <Text style={styles.helperText, { color: theme.textSecondary }]}>
-                        Enter each ingredient on a new line. You can use bullet points (-, •, *) or numbers.
-                    </Text>
-                    <TextInput
-                        style={[styles.textArea, { color: theme.text, borderColor: theme.border, backgroundColor: theme.surface }]}
-                        value={ingredients}
-                        onChangeText={setIngredients}
-                        placeholder="2 cups flour\n1 cup sugar\n3 eggs\n1 tsp vanilla"
-                        placeholderTextColor={theme.textSecondary}
-                        multiline
-                        numberOfLines={8}
-                    />
-                </View>
+                        <Text style={[styles.helperText, { color: theme.textSecondary }]}>
+                            Enter each ingredient on a new line. You can use bullet points (-, •, *) or numbers.
+                        </Text>
+                        <TextInput
+                            style={[styles.textArea, { color: theme.text, borderColor: theme.border, backgroundColor: theme.surface }]}
+                            value={ingredients}
+                            onChangeText={setIngredients}
+                            placeholder="2 cups flour\n1 cup sugar\n3 eggs\n1 tsp vanilla"
+                            placeholderTextColor={theme.textSecondary}
+                            multiline
+                            numberOfLines={8}
+                        />
+                    </View>
 
-                <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: theme.text }]}>Instructions *</Text>
-                    <Text style={styles.helperText, { color: theme.textSecondary }]}>
-                    Enter each step on a new line. You can use numbers (1., 2.) or bullet points.
-                </Text>
-                <TextInput
-                    style={[styles.textArea, { color: theme.text, borderColor: theme.border, backgroundColor: theme.surface }]}
-                    value={instructions}
-                    onChangeText={setInstructions}
-                    placeholder="1. Preheat oven to350ix dry ingredients\n3. Add wet ingredients\n4. Bake for 25 minutes"
-                    placeholderTextColor={theme.textSecondary}
-                    multiline
-                    numberOfLines={8}
-                />
-            </View>
+                    <View style={styles.section}>
+                        <Text style={[styles.sectionTitle, { color: theme.text }]}>Instructions *</Text>
+                        <Text style={[styles.helperText, { color: theme.textSecondary }]}>
+                            Enter each step on a new line. You can use numbers (1., 2.) or bullet points.
+                        </Text>
+                        <TextInput
+                            style={[styles.textArea, { color: theme.text, borderColor: theme.border, backgroundColor: theme.surface }]}
+                            value={instructions}
+                            onChangeText={setInstructions}
+                            placeholder="1. Preheat oven to350ix dry ingredients\n3. Add wet ingredients\n4. Bake for 25 minutes"
+                            placeholderTextColor={theme.textSecondary}
+                            multiline
+                            numberOfLines={8}
+                        />
+                    </View>
 
-            <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                    style={styles.saveButton}
-                    onPress={handleSave}
-                    disabled={loading}
-                >
-                    <Ionicons name="save-outline" size={20} color="#fff" />
-                    <Text style={styles.saveButtonText}>
-                        {loading ? 'Saving...' : 'Save Recipe'}
-                    </Text>
-                </TouchableOpacity>
-            </View>
-        </ScrollView>
+                    <View style={styles.buttonContainer}>
+                        <TouchableOpacity
+                            style={styles.saveButton}
+                            onPress={handleSave}
+                            disabled={loading}
+                        >
+                            <Ionicons name="save-outline" size={20} color="#fff" />
+                            <Text style={styles.saveButtonText}>
+                                {loading ? 'Saving...' : 'Save Recipe'}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                </ScrollView>
             </KeyboardAvoidingView >
         </SafeAreaView >
     );

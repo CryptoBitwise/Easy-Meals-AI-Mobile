@@ -104,13 +104,7 @@ export default function ProfileScreen({ navigation }: any) {
                     {renderMenuItem('person-outline', 'Personal Information', 'Update your profile details', () => navigation.navigate('AccountSettings'))}
                     {renderMenuItem('notifications-outline', 'Notifications', 'Manage your notifications', undefined, true, true, notifications, setNotifications)}
                     {renderMenuItem('moon-outline', 'Dark Mode', 'Switch to dark theme', undefined, true, true, isDarkMode, toggleTheme)}
-                    <TouchableOpacity
-                        style={[styles.menuItem, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}
-                        onPress={() => navigation.navigate('AISettings')}
-                    >
-                        <Ionicons name="key-outline" size={22} color={theme.primary} style={{ marginRight: 16 }} />
-                        <Text style={[styles.menuText, { color: theme.text }]}>AI Settings</Text>
-                    </TouchableOpacity>
+                    {renderMenuItem('key-outline', 'AI Settings', 'Configure OpenAI API and AI features', () => navigation.navigate('AISettings'))}
                 </View>
 
                 {/* Preferences Section */}
@@ -125,9 +119,9 @@ export default function ProfileScreen({ navigation }: any) {
                 {/* App Features Section */}
                 <View style={styles.section}>
                     <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>Features</Text>
-                    {renderMenuItem('bookmark-outline', 'Saved Recipes', 'View your favorite recipes')}
-                    {renderMenuItem('calendar-outline', 'Meal Plans', 'Manage your meal planning')}
-                    {renderMenuItem('list-outline', 'Shopping Lists', 'View your shopping history')}
+                    {renderMenuItem('bookmark-outline', 'Saved Recipes', 'View your favorite recipes', () => navigation.navigate('Favorites'))}
+                    {renderMenuItem('calendar-outline', 'Meal Plans', 'Manage your meal planning', () => navigation.navigate('MealPlan'))}
+                    {renderMenuItem('list-outline', 'Shopping Lists', 'View your shopping history', () => navigation.navigate('ShoppingList'))}
                     {renderMenuItem('analytics-outline', 'Cooking Stats', 'Track your cooking progress')}
                 </View>
 

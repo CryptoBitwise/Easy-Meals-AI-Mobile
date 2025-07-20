@@ -11,6 +11,7 @@ import {
     Keyboard,
     TouchableWithoutFeedback,
     Platform,
+    Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -55,14 +56,7 @@ export default function ShoppingListScreen({ navigation }: any) {
             if (stored) {
                 setItems(JSON.parse(stored));
             } else {
-                setItems([
-                    { id: '1', name: 'Chicken breast', quantity: '2 lbs', category: 'Meat', completed: false },
-                    { id: '2', name: 'Broccoli', quantity: '1 head', category: 'Vegetables', completed: false },
-                    { id: '3', name: 'Bell peppers', quantity: '3 pieces', category: 'Vegetables', completed: false },
-                    { id: '4', name: 'Soy sauce', quantity: '1 bottle', category: 'Pantry', completed: true },
-                    { id: '5', name: 'Olive oil', quantity: '1 bottle', category: 'Pantry', completed: false },
-                    { id: '6', name: 'Garlic', quantity: '1 bulb', category: 'Vegetables', completed: false },
-                ]);
+                setItems([]);
             }
         } catch (e) {
             setItems([]);
@@ -128,6 +122,24 @@ export default function ShoppingListScreen({ navigation }: any) {
         }
     };
 
+    const clearList = () => {
+        Alert.alert(
+            'Clear Shopping List',
+            'Are you sure you want to clear all items from your shopping list?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Clear All',
+                    style: 'destructive',
+                    onPress: () => {
+                        setItems([]);
+                        showSnackbar('Shopping list cleared', { id: '', name: '', quantity: '', category: '', completed: false });
+                    }
+                }
+            ]
+        );
+    };
+
     const renderRightActions = (
         progress: Animated.AnimatedInterpolation<any>,
         dragX: Animated.AnimatedInterpolation<any>,
@@ -145,30 +157,8 @@ export default function ShoppingListScreen({ navigation }: any) {
     };
 
     const renderItem = ({ item }: { item: ShoppingItem }) => {
-        const fadeAnim = useRef(new Animated.Value(1)).current;
-        const slideAnim = useRef(new Animated.Value(0)).current;
-
-        useEffect(() => {
-            Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: 300,
-                useNativeDriver: true,
-            }).start();
-        }, []);
-
         const handleToggle = () => {
-            Animated.sequence([
-                Animated.timing(slideAnim, {
-                    toValue: 10,
-                    duration: 100,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(slideAnim, {
-                    toValue: 0,
-                    duration: 100,
-                    useNativeDriver: true,
-                }),
-            ]).start(() => toggleItem(item.id));
+            toggleItem(item.id);
         };
 
         return (
@@ -182,8 +172,6 @@ export default function ShoppingListScreen({ navigation }: any) {
                             backgroundColor: theme.surface,
                             borderColor: theme.border,
                             shadowColor: theme.shadow,
-                            opacity: fadeAnim,
-                            transform: [{ translateX: slideAnim }],
                         },
                     ]}
                 >
@@ -247,7 +235,11 @@ export default function ShoppingListScreen({ navigation }: any) {
             {sortedCategories.map(category => (
                 <View key={category} style={styles.categorySection}>
                     <Text style={[styles.categoryHeader, { color: theme.primary }]}>{category}</Text>
-                    {groupedItems[category].map(item => renderItem({ item }))}
+                    {groupedItems[category].map(item => (
+                        <View key={item.id}>
+                            {renderItem({ item })}
+                        </View>
+                    ))}
                 </View>
             ))}
         </>
@@ -263,9 +255,20 @@ export default function ShoppingListScreen({ navigation }: any) {
                             <Ionicons name="arrow-back" size={24} color={theme.text} />
                         </TouchableOpacity>
                         <Text style={[styles.headerTitle, { color: theme.text }]}>Shopping List</Text>
-                        <TouchableOpacity accessibilityLabel="Share shopping list">
-                            <Ionicons name="share-outline" size={24} color={theme.text} />
-                        </TouchableOpacity>
+                        <View style={styles.headerActions}>
+                            {items.length > 0 && (
+                                <TouchableOpacity
+                                    onPress={clearList}
+                                    accessibilityLabel="Clear all items"
+                                    style={styles.headerButton}
+                                >
+                                    <Ionicons name="trash-outline" size={20} color={theme.primary} />
+                                </TouchableOpacity>
+                            )}
+                            <TouchableOpacity accessibilityLabel="Share shopping list">
+                                <Ionicons name="share-outline" size={24} color={theme.text} />
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
                     {/* Add Item Section */}
@@ -386,6 +389,14 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: 'bold',
         color: '#333',
+    },
+    headerActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    headerButton: {
+        padding: 8,
+        marginRight: 8,
     },
     addSection: {
         padding: 20,

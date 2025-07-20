@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-// import Voice from '@react-native-community/voice';
 
 interface MealPlan {
     day: string;
@@ -46,16 +45,7 @@ export default function AIMealPlannerScreen({ navigation }: any) {
     const [isListening, setIsListening] = useState(false);
     const [voiceTarget, setVoiceTarget] = useState<'dietary' | 'cuisine' | 'skill' | null>(null);
 
-    // Voice recognition handlers
-    useEffect(() => {
-        // Voice.onSpeechStart = onSpeechStart;
-        // Voice.onSpeechEnd = onSpeechEnd;
-        // Voice.onSpeechResults = onSpeechResults;
-        // Voice.onSpeechError = onSpeechError;
-        return () => {
-            // Voice.destroy().then(Voice.removeAllListeners);
-        };
-    }, [voiceTarget]);
+
 
     const onSpeechStart = () => {
         setIsListening(true);

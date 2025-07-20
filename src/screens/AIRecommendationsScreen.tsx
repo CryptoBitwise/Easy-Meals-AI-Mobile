@@ -228,7 +228,7 @@ const AIRecommendationsScreen: React.FC<Props> = ({ navigation }) => {
     if (loading) {
         return (
             <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-                <LoadingSpinner fullScreen />
+                <LoadingSpinner />
             </SafeAreaView>
         );
     }
@@ -239,7 +239,7 @@ const AIRecommendationsScreen: React.FC<Props> = ({ navigation }) => {
                 <EmptyState
                     icon="alert-circle-outline"
                     title="Error Loading Recommendations"
-                    subtitle={error}
+                    message={error}
                     actionText="Try Again"
                     onAction={handleRefresh}
                 />
@@ -263,7 +263,7 @@ const AIRecommendationsScreen: React.FC<Props> = ({ navigation }) => {
                 <EmptyState
                     icon="bulb-outline"
                     title="No Recommendations Yet"
-                    subtitle="AI is learning your preferences. Try searching for recipes to get personalized recommendations!"
+                    message="AI is learning your preferences. Try searching for recipes to get personalized recommendations!"
                     actionText="Explore Recipes"
                     onAction={() => navigation.navigate('Search')}
                 />
