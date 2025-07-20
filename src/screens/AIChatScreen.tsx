@@ -11,6 +11,7 @@ import {
     Platform,
     Alert,
     PermissionsAndroid,
+    Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -36,7 +37,7 @@ export default function AIChatScreen({ navigation }: any) {
     const [messages, setMessages] = useState<Message[]>([
         {
             id: '1',
-            text: "Hi! I'm your AI cooking assistant. I can help you find recipes, plan meals, suggest substitutions, and answer cooking questions. What would you like to cook today?",
+            text: "Hi! I'm Culinary Clara, your AI cooking assistant! 👩‍🍳 I can help you find recipes, plan meals, suggest substitutions, and answer all your cooking questions. What would you like to cook today?",
             isUser: false,
             timestamp: new Date(),
         },
@@ -44,6 +45,7 @@ export default function AIChatScreen({ navigation }: any) {
     const [inputText, setInputText] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const [isListening, setIsListening] = useState(false);
+    const [showMenu, setShowMenu] = useState(false);
     const flatListRef = useRef<FlatList>(null);
 
     const requestMicrophonePermission = async () => {
@@ -201,17 +203,90 @@ export default function AIChatScreen({ navigation }: any) {
         setInputText(prompt);
     };
 
+    const handleClearChat = () => {
+        Alert.alert(
+            'Clear Chat',
+            'Are you sure you want to clear all messages? This action cannot be undone.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Clear',
+                    style: 'destructive',
+                    onPress: () => {
+                        setMessages([{
+                            id: '1',
+                            text: "Hi! I'm Culinary Clara, your AI cooking assistant! 👩‍🍳 I can help you find recipes, plan meals, suggest substitutions, and answer all your cooking questions. What would you like to cook today?",
+                            isUser: false,
+                            timestamp: new Date(),
+                        }]);
+                        setShowMenu(false);
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleExportChat = () => {
+        const chatText = messages.map(msg =>
+            `${msg.isUser ? 'You' : 'Clara'}: ${msg.text}`
+        ).join('\n\n');
+
+        Alert.alert(
+            'Export Chat',
+            'Chat export feature coming soon! This will allow you to save your conversation with Clara.',
+            [{ text: 'OK' }]
+        );
+        setShowMenu(false);
+    };
+
+    const handleChatSettings = () => {
+        Alert.alert(
+            'Chat Settings',
+            'Chat settings feature coming soon! This will allow you to customize Clara\'s responses and behavior.',
+            [{ text: 'OK' }]
+        );
+        setShowMenu(false);
+    };
+
     const renderMessage = ({ item }: { item: Message }) => (
         <View style={[
             styles.messageContainer,
             item.isUser ? styles.userMessage : styles.aiMessage
         ]}>
+            {!item.isUser && (
+                <View style={styles.aiAvatar}>
+                    <View style={[styles.avatarContainer, { backgroundColor: theme.primary + '20' }]}>
+                        <Ionicons name="restaurant" size={20} color={theme.primary} />
+                    </View>
+                </View>
+            )}
             <View style={[
                 styles.messageBubble,
                 item.isUser
-                    ? [styles.userBubble, { backgroundColor: theme.primary }]
-                    : [styles.aiBubble, { backgroundColor: theme.surface, borderColor: theme.border }]
+                    ? [styles.userBubble, {
+                        backgroundColor: theme.primary,
+                        shadowColor: theme.primary,
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 4,
+                        elevation: 4,
+                    }]
+                    : [styles.aiBubble, {
+                        backgroundColor: theme.surface,
+                        borderColor: theme.border,
+                        shadowColor: theme.shadow,
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 4,
+                        elevation: 2,
+                    }]
             ]}>
+                {!item.isUser && (
+                    <View style={styles.aiMessageHeader}>
+                        <Text style={[styles.aiName, { color: theme.primary }]}>Clara</Text>
+                        <Ionicons name="sparkles" size={14} color={theme.primary} />
+                    </View>
+                )}
                 <Text style={[
                     styles.messageText,
                     { color: item.isUser ? '#fff' : theme.text }
@@ -221,7 +296,15 @@ export default function AIChatScreen({ navigation }: any) {
             </View>
             {item.isUser ? null : (
                 <TouchableOpacity
-                    style={[styles.speakButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                    style={[styles.speakButton, {
+                        backgroundColor: theme.surface,
+                        borderColor: theme.border,
+                        shadowColor: theme.shadow,
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 2,
+                        elevation: 1,
+                    }]}
                     onPress={() => Alert.alert('Voice output coming soon!')}
                 >
                     <Ionicons name="volume-high-outline" size={20} color={theme.textSecondary} />
@@ -239,9 +322,9 @@ export default function AIChatScreen({ navigation }: any) {
                 </TouchableOpacity>
                 <View style={styles.headerCenter}>
                     <Ionicons name="chatbubble-ellipses" size={24} color={theme.primary} />
-                    <Text style={[styles.headerTitle, { color: theme.text }]}>AI Assistant</Text>
+                    <Text style={[styles.headerTitle, { color: theme.text }]}>Culinary Clara</Text>
                 </View>
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => setShowMenu(true)}>
                     <Ionicons name="ellipsis-vertical" size={24} color={theme.text} />
                 </TouchableOpacity>
             </View>
@@ -279,9 +362,26 @@ export default function AIChatScreen({ navigation }: any) {
                 ListFooterComponent={
                     isTyping ? (
                         <View style={styles.typingContainer}>
-                            <View style={[styles.typingBubble, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                            <View style={styles.aiAvatar}>
+                                <View style={[styles.avatarContainer, { backgroundColor: theme.primary + '20' }]}>
+                                    <Ionicons name="restaurant" size={20} color={theme.primary} />
+                                </View>
+                            </View>
+                            <View style={[styles.typingBubble, {
+                                backgroundColor: theme.surface,
+                                borderColor: theme.border,
+                                shadowColor: theme.shadow,
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 4,
+                                elevation: 2,
+                            }]}>
+                                <View style={styles.aiMessageHeader}>
+                                    <Text style={[styles.aiName, { color: theme.primary }]}>Clara</Text>
+                                    <Ionicons name="sparkles" size={14} color={theme.primary} />
+                                </View>
                                 <Text style={[styles.typingText, { color: theme.textSecondary }]}>
-                                    AI is typing...
+                                    Clara is typing...
                                 </Text>
                             </View>
                         </View>
@@ -292,10 +392,26 @@ export default function AIChatScreen({ navigation }: any) {
             {/* Input */}
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={[styles.inputContainer, { backgroundColor: theme.surface, borderTopColor: theme.border }]}
+                style={[styles.inputContainer, {
+                    backgroundColor: theme.surface,
+                    borderTopColor: theme.border,
+                    shadowColor: theme.shadow,
+                    shadowOffset: { width: 0, height: -2 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 4,
+                    elevation: 4,
+                }]}
             >
                 <TouchableOpacity
-                    style={[styles.micButton, isListening ? styles.micButtonActive : null]}
+                    style={[styles.micButton, {
+                        backgroundColor: theme.surface,
+                        borderColor: theme.primary,
+                        shadowColor: theme.shadow,
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 2,
+                        elevation: 1,
+                    }, isListening ? styles.micButtonActive : null]}
                     onPress={startVoiceInput}
                 >
                     <Ionicons name={isListening ? 'mic' : 'mic-outline'} size={24} color={isListening ? '#fff' : theme.primary} />
@@ -304,9 +420,14 @@ export default function AIChatScreen({ navigation }: any) {
                     style={[styles.textInput, {
                         backgroundColor: theme.background,
                         color: theme.text,
-                        borderColor: theme.border
+                        borderColor: theme.border,
+                        shadowColor: theme.shadow,
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.05,
+                        shadowRadius: 2,
+                        elevation: 1,
                     }]}
-                    placeholder="Ask me anything about cooking..."
+                    placeholder="Ask Clara anything about cooking..."
                     placeholderTextColor={theme.textSecondary}
                     value={inputText}
                     onChangeText={setInputText}
@@ -314,7 +435,14 @@ export default function AIChatScreen({ navigation }: any) {
                     maxLength={500}
                 />
                 <TouchableOpacity
-                    style={[styles.sendButton, { backgroundColor: theme.primary }]}
+                    style={[styles.sendButton, {
+                        backgroundColor: theme.primary,
+                        shadowColor: theme.primary,
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 4,
+                        elevation: 4,
+                    }]}
                     onPress={handleSendMessage}
                     disabled={!inputText.trim()}
                 >
@@ -325,6 +453,53 @@ export default function AIChatScreen({ navigation }: any) {
                     />
                 </TouchableOpacity>
             </KeyboardAvoidingView>
+
+            {/* Chat Menu Modal */}
+            <Modal
+                visible={showMenu}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setShowMenu(false)}
+            >
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setShowMenu(false)}
+                >
+                    <View style={[styles.menuContainer, {
+                        backgroundColor: theme.surface,
+                        shadowColor: theme.shadow,
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.2,
+                        shadowRadius: 8,
+                        elevation: 8,
+                    }]}>
+                        <TouchableOpacity
+                            style={[styles.menuItem, { borderBottomColor: theme.border }]}
+                            onPress={handleClearChat}
+                        >
+                            <Ionicons name="trash-outline" size={20} color="#E91E63" />
+                            <Text style={[styles.menuItemText, { color: '#E91E63' }]}>Clear Chat</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.menuItem, { borderBottomColor: theme.border }]}
+                            onPress={handleExportChat}
+                        >
+                            <Ionicons name="download-outline" size={20} color={theme.primary} />
+                            <Text style={[styles.menuItemText, { color: theme.text }]}>Export Chat</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.menuItem}
+                            onPress={handleChatSettings}
+                        >
+                            <Ionicons name="settings-outline" size={20} color={theme.primary} />
+                            <Text style={[styles.menuItemText, { color: theme.text }]}>Chat Settings</Text>
+                        </TouchableOpacity>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -432,6 +607,11 @@ const styles = StyleSheet.create({
     micButtonActive: {
         backgroundColor: '#4CAF50',
         borderColor: '#4CAF50',
+        shadowColor: '#4CAF50',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 4,
     },
     textInput: {
         flex: 1,
@@ -458,5 +638,48 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginLeft: 10,
         borderWidth: 1,
+    },
+    aiAvatar: {
+        marginRight: 8,
+        alignItems: 'flex-start',
+    },
+    avatarContainer: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    aiMessageHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    aiName: {
+        fontSize: 12,
+        fontWeight: '600',
+        marginRight: 4,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    menuContainer: {
+        width: 200,
+        borderRadius: 12,
+        overflow: 'hidden',
+    },
+    menuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        borderBottomWidth: 1,
+    },
+    menuItemText: {
+        fontSize: 16,
+        fontWeight: '500',
+        marginLeft: 12,
     },
 }); 

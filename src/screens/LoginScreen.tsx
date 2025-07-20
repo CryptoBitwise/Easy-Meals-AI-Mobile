@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, SafeAreaView, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
-import mockAuth from '../services/mockAuth';
+import { signIn, signUp, resetPassword, trackUserAction } from '../services/firebase';
 import GradientButton from '../components/GradientButton';
 import ModernCard from '../components/ModernCard';
 
@@ -12,6 +13,32 @@ export default function LoginScreen({ navigation }: any) {
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isSignUp, setIsSignUp] = useState(false);
+    const [rememberMe, setRememberMe] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+
+    // Load remember me preference and saved email on component mount
+    React.useEffect(() => {
+        const loadSavedPreferences = async () => {
+            try {
+                const savedRememberMe = await AsyncStorage.getItem('remember_me');
+                if (savedRememberMe !== null) {
+                    setRememberMe(savedRememberMe === 'true');
+
+                    // If remember me is enabled, load the saved email
+                    if (savedRememberMe === 'true') {
+                        const savedEmail = await AsyncStorage.getItem('saved_email');
+                        if (savedEmail) {
+                            setEmail(savedEmail);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.log('Error loading saved preferences:', error);
+            }
+        };
+
+        loadSavedPreferences();
+    }, []);
 
     const handleAuth = async () => {
         if (!email || !password) {
@@ -21,12 +48,27 @@ export default function LoginScreen({ navigation }: any) {
 
         setIsLoading(true);
         try {
+            // Save remember me preference and email
+            if (!isSignUp) {
+                await AsyncStorage.setItem('remember_me', rememberMe.toString());
+
+                // Save email if remember me is enabled
+                if (rememberMe) {
+                    await AsyncStorage.setItem('saved_email', email);
+                } else {
+                    // Clear saved email if remember me is disabled
+                    await AsyncStorage.removeItem('saved_email');
+                }
+            }
+
             const result = isSignUp
-                ? await mockAuth.signUp(email, password)
-                : await mockAuth.signIn(email, password);
+                ? await signUp(email, password)
+                : await signIn(email, password, rememberMe);
 
             if (result.success) {
-                navigation.replace('Home');
+                trackUserAction(isSignUp ? 'user_signup' : 'user_signin', { email, rememberMe });
+                // Navigation will be handled automatically by AuthNavigator
+                // No need to manually navigate
             } else {
                 Alert.alert('Error', result.error || 'Authentication failed');
             }
@@ -37,13 +79,26 @@ export default function LoginScreen({ navigation }: any) {
         }
     };
 
-    const handleForgotPassword = () => {
+    const handleForgotPassword = async () => {
         if (!email) {
             Alert.alert('Error', 'Please enter your email first');
             return;
         }
-        // TODO: Implement password reset
-        Alert.alert('Coming Soon', 'Password reset feature will be available soon');
+
+        setIsLoading(true);
+        try {
+            const result = await resetPassword(email);
+            if (result.success) {
+                Alert.alert('Success', 'Password reset email sent! Check your inbox.');
+                trackUserAction('password_reset_requested', { email });
+            } else {
+                Alert.alert('Error', result.error || 'Failed to send reset email');
+            }
+        } catch (error) {
+            Alert.alert('Error', 'Failed to send reset email');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -83,17 +138,61 @@ export default function LoginScreen({ navigation }: any) {
                                 placeholder="Password"
                                 value={password}
                                 onChangeText={setPassword}
-                                secureTextEntry
+                                secureTextEntry={!showPassword}
                                 placeholderTextColor={theme.textTertiary}
                             />
+                            <TouchableOpacity
+                                onPress={() => setShowPassword(!showPassword)}
+                                style={styles.eyeButton}
+                            >
+                                <Ionicons
+                                    name={showPassword ? "eye-outline" : "eye-off-outline"}
+                                    size={20}
+                                    color={theme.textSecondary}
+                                />
+                            </TouchableOpacity>
                         </View>
 
                         {!isSignUp && (
-                            <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotPassword}>
-                                <Text style={[styles.forgotPasswordText, { color: theme.primary }]}>
-                                    Forgot Password?
-                                </Text>
-                            </TouchableOpacity>
+                            <View style={styles.forgotPasswordRow}>
+                                <TouchableOpacity
+                                    style={styles.rememberMeContainer}
+                                    onPress={async () => {
+                                        const newRememberMe = !rememberMe;
+                                        setRememberMe(newRememberMe);
+
+                                        // If user unchecks remember me, clear saved email
+                                        if (!newRememberMe) {
+                                            try {
+                                                await AsyncStorage.removeItem('saved_email');
+                                            } catch (error) {
+                                                console.log('Error clearing saved email:', error);
+                                            }
+                                        }
+                                    }}
+                                >
+                                    <View style={[
+                                        styles.checkbox,
+                                        {
+                                            backgroundColor: rememberMe ? theme.primary : 'transparent',
+                                            borderColor: rememberMe ? theme.primary : theme.border
+                                        }
+                                    ]}>
+                                        {rememberMe && (
+                                            <Ionicons name="checkmark" size={16} color="#fff" />
+                                        )}
+                                    </View>
+                                    <Text style={[styles.rememberMeText, { color: theme.textSecondary }]}>
+                                        Remember me
+                                    </Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity onPress={handleForgotPassword}>
+                                    <Text style={[styles.forgotPasswordText, { color: theme.primary }]}>
+                                        Forgot Password?
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
                         )}
 
                         <GradientButton
@@ -116,6 +215,15 @@ export default function LoginScreen({ navigation }: any) {
                             </Text>
                             <Text style={[styles.switchModeLink, { color: theme.primary }]}>
                                 {isSignUp ? 'Sign In' : 'Sign Up'}
+                            </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.backToIntro}
+                            onPress={() => navigation.replace('Intro')}
+                        >
+                            <Text style={[styles.backToIntroText, { color: theme.textTertiary }]}>
+                                ← Back to Intro
                             </Text>
                         </TouchableOpacity>
                     </View>
@@ -178,9 +286,32 @@ const styles = StyleSheet.create({
         fontSize: 16,
         marginLeft: 12,
     },
-    forgotPassword: {
-        alignSelf: 'flex-end',
+    eyeButton: {
+        padding: 8,
+        marginLeft: 8,
+    },
+    forgotPasswordRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: 24,
+    },
+    rememberMeContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    checkbox: {
+        width: 20,
+        height: 20,
+        borderRadius: 4,
+        borderWidth: 2,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 8,
+    },
+    rememberMeText: {
+        fontSize: 14,
+        fontWeight: '500',
     },
     forgotPasswordText: {
         fontSize: 14,
@@ -209,5 +340,13 @@ const styles = StyleSheet.create({
     switchModeLink: {
         fontSize: 14,
         fontWeight: '600',
+    },
+    backToIntro: {
+        marginTop: 16,
+        alignItems: 'center',
+    },
+    backToIntroText: {
+        fontSize: 14,
+        fontWeight: '500',
     },
 }); 

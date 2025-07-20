@@ -54,15 +54,33 @@ export default function SearchScreen({ navigation }: any) {
     const { theme } = useTheme();
     const [searchQuery, setSearchQuery] = useState('');
     const [filteredRecipes, setFilteredRecipes] = useState<Recipe[]>([]);
+    const [featuredRecipes, setFeaturedRecipes] = useState<Recipe[]>([]);
     const [activeFilters, setActiveFilters] = useState<Filter[]>(filters);
     const [searchHistory, setSearchHistory] = useState<string[]>([]);
     const [showFilters, setShowFilters] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isSearching, setIsSearching] = useState(false);
+    const [isLoadingFeatured, setIsLoadingFeatured] = useState(true);
 
     useEffect(() => {
         loadSearchHistory();
+        loadFeaturedRecipes();
     }, []);
+
+    const loadFeaturedRecipes = async () => {
+        try {
+            setIsLoadingFeatured(true);
+            // Load a variety of popular recipes for discovery
+            const recipes = await recipeService.fetchAllRecipes();
+            // Shuffle and take first 12 for featured section
+            const shuffled = recipes.sort(() => 0.5 - Math.random());
+            setFeaturedRecipes(shuffled.slice(0, 12));
+        } catch (error) {
+            console.log('Error loading featured recipes:', error);
+        } finally {
+            setIsLoadingFeatured(false);
+        }
+    };
 
     const loadSearchHistory = async () => {
         try {
@@ -120,6 +138,16 @@ export default function SearchScreen({ navigation }: any) {
 
     const clearFilters = () => {
         setActiveFilters(prev => prev.map(filter => ({ ...filter, selected: false })));
+    };
+
+    const clearSearchHistory = async () => {
+        try {
+            setSearchHistory([]);
+            await AsyncStorage.removeItem('search_history');
+            Alert.alert('Success', 'Recent searches cleared!');
+        } catch (error) {
+            Alert.alert('Error', 'Failed to clear search history');
+        }
     };
 
     const handleVoiceSearch = () => {
@@ -214,7 +242,7 @@ export default function SearchScreen({ navigation }: any) {
                 >
                     <Ionicons name="arrow-back" size={24} color={theme.text} />
                 </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: theme.text }]}>Search Recipes</Text>
+                <Text style={[styles.headerTitle, { color: theme.text }]}>Explore Recipes</Text>
                 <View style={{ width: 24 }} />
             </View>
 
@@ -226,7 +254,7 @@ export default function SearchScreen({ navigation }: any) {
                         borderColor: theme.border,
                         backgroundColor: theme.surface
                     }]}
-                    placeholder="Search recipes..."
+                    placeholder="Search for recipes, ingredients, or cuisines..."
                     value={searchQuery}
                     onChangeText={handleSearch}
                     placeholderTextColor={theme.textSecondary}
@@ -234,7 +262,10 @@ export default function SearchScreen({ navigation }: any) {
             </View>
 
             {/* Content */}
-            <View style={styles.content}>
+            <ScrollView
+                style={styles.content}
+                showsVerticalScrollIndicator={false}
+            >
                 {searchQuery.trim() !== '' ? (
                     <View style={styles.resultsSection}>
                         <View style={styles.resultsHeader}>
@@ -258,14 +289,100 @@ export default function SearchScreen({ navigation }: any) {
                                 keyExtractor={(item) => item.id}
                                 showsVerticalScrollIndicator={false}
                                 contentContainerStyle={styles.recipeList}
+                                scrollEnabled={false}
                             />
                         )}
                     </View>
                 ) : (
-                    renderSearchHistory()
+                    <>
+                        {/* Featured Recipes Section */}
+                        <View style={styles.featuredSection}>
+                            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                                Featured Recipes
+                            </Text>
+                            <Text style={[styles.sectionSubtitle, { color: theme.textSecondary }]}>
+                                Discover delicious recipes to try
+                            </Text>
+
+                            {isLoadingFeatured ? (
+                                <View style={styles.loadingContainer}>
+                                    <ActivityIndicator size="large" color={theme.primary} />
+                                    <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+                                        Loading recipes...
+                                    </Text>
+                                </View>
+                            ) : (
+                                <View style={styles.featuredGrid}>
+                                    {featuredRecipes.map((recipe) => (
+                                        <TouchableOpacity
+                                            key={recipe.id}
+                                            style={[styles.featuredCard, { backgroundColor: theme.surface, shadowColor: theme.shadow }]}
+                                            onPress={() => navigation.navigate('RecipeDetail', { id: recipe.id })}
+                                            activeOpacity={0.8}
+                                        >
+                                            {recipe.image ? (
+                                                <Image
+                                                    source={{ uri: recipe.image }}
+                                                    style={styles.featuredImage}
+                                                    resizeMode="cover"
+                                                />
+                                            ) : (
+                                                <View style={[styles.featuredImagePlaceholder, { backgroundColor: theme.background }]}>
+                                                    <Ionicons name="restaurant-outline" size={24} color={theme.textSecondary} />
+                                                </View>
+                                            )}
+                                            <View style={styles.featuredInfo}>
+                                                <Text style={[styles.featuredTitle, { color: theme.text }]} numberOfLines={2}>
+                                                    {recipe.title}
+                                                </Text>
+                                                <Text style={[styles.featuredCuisine, { color: theme.textSecondary }]}>
+                                                    {recipe.cuisine}
+                                                </Text>
+                                            </View>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            )}
+                        </View>
+
+                        {/* Search History Section */}
+                        <View style={styles.historySection}>
+                            <View style={styles.historyHeader}>
+                                <Text style={[styles.historyTitle, { color: theme.text }]}>Recent Searches</Text>
+                                {searchHistory.length > 0 && (
+                                    <TouchableOpacity
+                                        style={styles.clearButton}
+                                        onPress={clearSearchHistory}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text style={[styles.clearButtonText, { color: theme.primary }]}>
+                                            Clear
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                            {searchHistory.length === 0 ? (
+                                <Text style={[styles.emptyHistoryText, { color: theme.textSecondary }]}>
+                                    No recent searches
+                                </Text>
+                            ) : (
+                                searchHistory.map((query, index) => (
+                                    <TouchableOpacity
+                                        key={index}
+                                        style={[styles.historyItem, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                                        onPress={() => handleSearch(query)}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Ionicons name="time-outline" size={16} color={theme.textSecondary} />
+                                        <Text style={[styles.historyText, { color: theme.text }]}>{query}</Text>
+                                    </TouchableOpacity>
+                                ))
+                            )}
+                        </View>
+                    </>
                 )}
-            </View>
-        </SafeAreaView>
+            </ScrollView>
+        </SafeAreaView >
     );
 }
 
@@ -448,5 +565,73 @@ const styles = StyleSheet.create({
     filterChipText: {
         fontSize: 14,
         fontWeight: '500',
+    },
+    featuredSection: {
+        marginBottom: 30,
+    },
+    sectionTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginBottom: 4,
+    },
+    sectionSubtitle: {
+        fontSize: 14,
+        marginBottom: 16,
+    },
+    loadingContainer: {
+        alignItems: 'center',
+        paddingVertical: 40,
+    },
+    loadingText: {
+        marginTop: 12,
+        fontSize: 14,
+    },
+    featuredGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+    },
+    featuredCard: {
+        width: '48%',
+        borderRadius: 12,
+        marginBottom: 12,
+        shadowOpacity: 0.1,
+        shadowRadius: 3.84,
+        elevation: 5,
+        overflow: 'hidden',
+    },
+    featuredImage: {
+        width: '100%',
+        height: 120,
+    },
+    featuredImagePlaceholder: {
+        width: '100%',
+        height: 120,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    featuredInfo: {
+        padding: 12,
+    },
+    featuredTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        marginBottom: 4,
+        lineHeight: 18,
+    },
+    featuredCuisine: {
+        fontSize: 12,
+    },
+    historyHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    emptyHistoryText: {
+        fontSize: 14,
+        fontStyle: 'italic',
+        textAlign: 'center',
+        paddingVertical: 20,
     },
 }); 

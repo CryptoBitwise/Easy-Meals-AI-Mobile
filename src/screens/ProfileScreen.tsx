@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -8,16 +8,86 @@ import {
     SafeAreaView,
     Switch,
     Alert,
+    Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import notificationService from '../services/notificationService';
 
 export default function ProfileScreen({ navigation }: any) {
     const { isDarkMode, toggleTheme, theme } = useTheme();
+    const { user, signOut } = useAuth();
     const [notifications, setNotifications] = useState(true);
     const [aiSuggestions, setAiSuggestions] = useState(true);
+    const [userProfile, setUserProfile] = useState<any>(null);
+    const [profileImage, setProfileImage] = useState<string | null>(null);
 
-    const handleLogout = () => {
+    useEffect(() => {
+        loadUserProfile();
+        loadNotificationSettings();
+    }, []);
+
+    // Reload profile when screen comes into focus
+    useEffect(() => {
+        const unsubscribe = navigation.addListener('focus', () => {
+            loadUserProfile();
+        });
+
+        return unsubscribe;
+    }, [navigation]);
+
+    const loadUserProfile = async () => {
+        try {
+            const savedProfile = await AsyncStorage.getItem('user_profile');
+            if (savedProfile) {
+                setUserProfile(JSON.parse(savedProfile));
+            }
+
+            // Load profile image
+            const savedImage = await AsyncStorage.getItem('profile_image');
+            if (savedImage) {
+                setProfileImage(savedImage);
+            }
+        } catch (error) {
+            console.log('Error loading user profile:', error);
+        }
+    };
+
+    const loadNotificationSettings = async () => {
+        try {
+            const settings = await notificationService.getSettings();
+            setNotifications(settings.enabled);
+        } catch (error) {
+            console.log('Error loading notification settings:', error);
+        }
+    };
+
+    const handleNotificationToggle = async (enabled: boolean) => {
+        try {
+            setNotifications(enabled);
+            await notificationService.toggleNotifications(enabled);
+
+            if (enabled) {
+                const hasPermission = await notificationService.requestPermissions();
+                if (!hasPermission) {
+                    Alert.alert(
+                        'Permission Required',
+                        'Please enable notifications in your device settings to receive cooking reminders and tips.',
+                        [{ text: 'OK' }]
+                    );
+                }
+            }
+        } catch (error) {
+            console.log('Error toggling notifications:', error);
+            Alert.alert('Error', 'Failed to update notification settings');
+        }
+    };
+
+
+
+    const handleLogout = async () => {
         Alert.alert(
             'Logout',
             'Are you sure you want to logout?',
@@ -26,22 +96,87 @@ export default function ProfileScreen({ navigation }: any) {
                 {
                     text: 'Logout',
                     style: 'destructive',
-                    onPress: () => navigation.replace('Intro')
+                    onPress: async () => {
+                        await signOut();
+                        // Navigation will be handled by AuthNavigator
+                    }
                 },
             ]
+        );
+    };
+
+    const handleTermsOfService = () => {
+        Alert.alert(
+            'Terms of Service',
+            'EasyMeal AI Terms of Service\n\n' +
+            '1. Acceptance of Terms\n' +
+            'By using EasyMeal AI, you agree to these terms.\n\n' +
+            '2. Service Description\n' +
+            'EasyMeal AI provides AI-powered cooking assistance and recipe management.\n\n' +
+            '3. User Responsibilities\n' +
+            'You are responsible for the accuracy of information you provide.\n\n' +
+            '4. Privacy\n' +
+            'Your privacy is important. See our Privacy Policy for details.\n\n' +
+            '5. Modifications\n' +
+            'We may update these terms. Continued use constitutes acceptance.\n\n' +
+            '6. Contact\n' +
+            'For questions about these terms, contact us at support@easymeal.ai',
+            [{ text: 'OK' }]
+        );
+    };
+
+    const handlePrivacyPolicy = () => {
+        Alert.alert(
+            'Privacy Policy',
+            'EasyMeal AI Privacy Policy\n\n' +
+            '1. Information We Collect\n' +
+            '• Account information (email, profile data)\n' +
+            '• Usage data (recipes, preferences, chat history)\n' +
+            '• Device information (app usage, crash reports)\n\n' +
+            '2. How We Use Information\n' +
+            '• Provide personalized cooking assistance\n' +
+            '• Improve our AI services\n' +
+            '• Send important updates\n\n' +
+            '3. Data Security\n' +
+            '• We use industry-standard encryption\n' +
+            '• Your data is stored securely\n' +
+            '• We never sell your personal information\n\n' +
+            '4. Your Rights\n' +
+            '• Access your data\n' +
+            '• Request data deletion\n' +
+            '• Opt out of communications\n\n' +
+            '5. Contact\n' +
+            'For privacy questions: privacy@easymeal.ai',
+            [{ text: 'OK' }]
         );
     };
 
     const renderProfileHeader = () => (
         <View style={[styles.profileHeader, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
             <View style={[styles.avatarContainer, { backgroundColor: theme.border }]}>
-                <Text style={styles.avatar}>👤</Text>
+                {profileImage ? (
+                    <Image source={{ uri: profileImage }} style={styles.avatarImage} />
+                ) : (
+                    <Text style={styles.avatar}>👤</Text>
+                )}
             </View>
             <View style={styles.userInfo}>
-                <Text style={[styles.userName, { color: theme.text }]}>John Doe</Text>
-                <Text style={[styles.userEmail, { color: theme.textSecondary }]}>john.doe@example.com</Text>
+                <Text style={[styles.userName, { color: theme.text }]}>
+                    {userProfile?.name || user?.displayName || user?.email?.split('@')[0] || 'User'}
+                </Text>
+                <Text style={[styles.userEmail, { color: theme.textSecondary }]}>
+                    {userProfile?.email || user?.email || 'user@example.com'}
+                </Text>
+                {userProfile?.bio && (
+                    <Text style={[styles.userBio, { color: theme.textTertiary }]} numberOfLines={1}>
+                        {userProfile.bio}
+                    </Text>
+                )}
             </View>
-            <TouchableOpacity style={styles.editButton}>
+            <TouchableOpacity
+                style={styles.editButton}
+                onPress={() => navigation.navigate('AccountSettings')}
+            >
                 <Ionicons name="pencil" size={20} color={theme.primary} />
             </TouchableOpacity>
         </View>
@@ -102,7 +237,7 @@ export default function ProfileScreen({ navigation }: any) {
                 <View style={styles.section}>
                     <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>Account</Text>
                     {renderMenuItem('person-outline', 'Personal Information', 'Update your profile details', () => navigation.navigate('AccountSettings'))}
-                    {renderMenuItem('notifications-outline', 'Notifications', 'Manage your notifications', undefined, true, true, notifications, setNotifications)}
+                    {renderMenuItem('notifications-outline', 'Notifications', 'Manage your notifications', undefined, true, true, notifications, handleNotificationToggle)}
                     {renderMenuItem('moon-outline', 'Dark Mode', 'Switch to dark theme', undefined, true, true, isDarkMode, toggleTheme)}
                     {renderMenuItem('key-outline', 'AI Settings', 'Configure OpenAI API and AI features', () => navigation.navigate('AISettings'))}
                 </View>
@@ -138,8 +273,9 @@ export default function ProfileScreen({ navigation }: any) {
                 <View style={styles.section}>
                     <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>About</Text>
                     {renderMenuItem('information-circle-outline', 'App Version', '1.0.0')}
-                    {renderMenuItem('document-text-outline', 'Terms of Service', 'Read our terms')}
-                    {renderMenuItem('shield-checkmark-outline', 'Privacy Policy', 'How we protect your data')}
+                    {renderMenuItem('document-text-outline', 'Terms of Service', 'Read our terms', () => handleTermsOfService())}
+                    {renderMenuItem('shield-checkmark-outline', 'Privacy Policy', 'How we protect your data', () => handlePrivacyPolicy())}
+
                 </View>
 
                 {/* Logout Button */}
@@ -193,6 +329,11 @@ const styles = StyleSheet.create({
     avatar: {
         fontSize: 30,
     },
+    avatarImage: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 30,
+    },
     userInfo: {
         flex: 1,
     },
@@ -205,6 +346,10 @@ const styles = StyleSheet.create({
     userEmail: {
         fontSize: 14,
         color: '#666',
+    },
+    userBio: {
+        fontSize: 12,
+        marginTop: 2,
     },
     editButton: {
         padding: 8,

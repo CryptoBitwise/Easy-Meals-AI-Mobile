@@ -175,7 +175,7 @@ export default function IntroScreen({ navigation }: any) {
                 <View style={styles.ctaSection}>
                     <GradientButton
                         title="Get Started"
-                        onPress={() => navigation.navigate('Login')}
+                        onPress={() => navigation.replace('Login')}
                         icon="arrow-forward-outline"
                         variant="primary"
                         size="xlarge"

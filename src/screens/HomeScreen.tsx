@@ -12,6 +12,7 @@ import {
     Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import preferencesService from '../services/preferencesService';
@@ -26,6 +27,7 @@ export default function HomeScreen({ navigation }: any) {
     const [userPreferences, setUserPreferences] = useState<any>(null);
     const [skillBasedRecipes, setSkillBasedRecipes] = useState<Recipe[]>([]);
     const [loading, setLoading] = useState(true);
+    const [profileImage, setProfileImage] = useState<string | null>(null);
 
     useEffect(() => {
         // Simulate loading on mount
@@ -44,10 +46,38 @@ export default function HomeScreen({ navigation }: any) {
         loadUserData();
     }, []);
 
+    useEffect(() => {
+        const unsubscribe = navigation.addListener('focus', () => {
+            // Reload profile image when screen comes into focus
+            loadProfileImage();
+        });
+
+        return unsubscribe;
+    }, [navigation]);
+
+    const loadProfileImage = async () => {
+        try {
+            const savedImage = await AsyncStorage.getItem('profile_image');
+            if (savedImage) {
+                setProfileImage(savedImage);
+            } else {
+                setProfileImage(null);
+            }
+        } catch (error) {
+            console.log('Error loading profile image:', error);
+        }
+    };
+
     const loadUserData = async () => {
         try {
             const prefs = preferencesService.getPreferences();
             setUserPreferences(prefs);
+
+            // Load profile image
+            const savedImage = await AsyncStorage.getItem('profile_image');
+            if (savedImage) {
+                setProfileImage(savedImage);
+            }
 
             // Load skill-based recommendations
             await loadSkillBasedRecipes(prefs.cookingSkill);
@@ -248,13 +278,17 @@ export default function HomeScreen({ navigation }: any) {
                 >
                     {/* Header */}
                     <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-                        <Text style={[styles.headerTitle, { color: theme.text }]}>EasyMeals AI</Text>
+                        <Text style={[styles.headerTitle, { color: theme.text }]}>EasyMeal AI</Text>
                         <TouchableOpacity
                             style={styles.profileButton}
                             onPress={() => navigation.navigate('Profile')}
                             activeOpacity={0.7}
                         >
-                            <Ionicons name="person-circle-outline" size={24} color={theme.text} />
+                            {profileImage ? (
+                                <Image source={{ uri: profileImage }} style={styles.profileImage} />
+                            ) : (
+                                <Ionicons name="person-circle-outline" size={24} color={theme.text} />
+                            )}
                         </TouchableOpacity>
                     </View>
 
@@ -268,12 +302,13 @@ export default function HomeScreen({ navigation }: any) {
                             <View style={styles.aiChatContent}>
                                 <Ionicons name="chatbubble-ellipses" size={32} color="#fff" />
                                 <View style={styles.aiChatText}>
-                                    <Text style={styles.aiChatTitle}>Chat with AI</Text>
+                                    <Text style={styles.aiChatTitle}>Chat with Clara</Text>
                                     <Text style={styles.aiChatSubtitle}>Get recipe ideas, meal plans & cooking tips</Text>
                                 </View>
                             </View>
                             <Ionicons name="chevron-forward" size={24} color="#fff" />
                         </TouchableOpacity>
+
                     </View>
 
                     {/* Quick Actions */}
@@ -313,6 +348,7 @@ export default function HomeScreen({ navigation }: any) {
                             <Ionicons name="grid-outline" size={32} color="#9C27B0" />
                             <Text style={[styles.actionText, { color: theme.text }]}>Categories</Text>
                         </TouchableOpacity>
+
                     </View>
 
                     {/* Favorites Card */}
@@ -373,6 +409,11 @@ const styles = StyleSheet.create({
     },
     profileButton: {
         padding: 8,
+    },
+    profileImage: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
     },
     quickActions: {
         flexDirection: 'row',
@@ -591,5 +632,14 @@ const styles = StyleSheet.create({
         marginLeft: 10,
         fontSize: 14,
         lineHeight: 20,
+    },
+    helpIndicator: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: 'transparent',
     },
 }); 

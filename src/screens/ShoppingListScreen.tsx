@@ -307,8 +307,13 @@ export default function ShoppingListScreen({ navigation }: any) {
                     </View>
 
                     {/* Progress */}
-                    <View style={styles.progressSection}>
-                        <Text style={[styles.progressText, { color: theme.textSecondary }]}>
+                    <View style={[styles.progressSection, { backgroundColor: theme.surface }]}>
+                        <Text style={[styles.progressText, {
+                            color: theme.text,
+                            fontWeight: '700',
+                            fontSize: 18,
+                            textAlign: 'center',
+                        }]}>
                             {completedItems.length} of {items.length} items completed
                         </Text>
                         <View style={[styles.progressBar, { backgroundColor: theme.border }]}>
@@ -438,11 +443,21 @@ const styles = StyleSheet.create({
     },
     progressSection: {
         padding: 20,
-        backgroundColor: '#fff',
+        marginHorizontal: 20,
+        marginVertical: 10,
+        borderRadius: 12,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 3.84,
+        elevation: 5,
     },
     progressText: {
-        fontSize: 14,
-        color: '#666',
+        fontSize: 16,
+        fontWeight: '600',
         marginBottom: 8,
     },
     progressBar: {
