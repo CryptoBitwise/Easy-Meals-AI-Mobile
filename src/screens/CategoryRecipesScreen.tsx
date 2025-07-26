@@ -116,6 +116,7 @@ const CategoryRecipesScreen = ({ route, navigation }: any) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        paddingTop: 10, // Extra padding for status bar
     },
     header: {
         flexDirection: 'row',
@@ -123,6 +124,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 20,
         paddingVertical: 16,
+        paddingTop: 50, // Extra padding for camera lens/notch
         borderBottomWidth: 1,
     },
     backButton: {

@@ -283,7 +283,7 @@ const AIRecommendationsScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        paddingTop: 48,
+        paddingTop: 10, // Extra padding for status bar
         paddingHorizontal: 16,
     },
     header: {
@@ -292,6 +292,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 12,
         paddingHorizontal: 16,
+        paddingTop: 50, // Extra padding for camera lens/notch
         borderBottomWidth: 1,
     },
     headerTitle: {

@@ -226,6 +226,7 @@ export default function RecipeDetailScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        paddingTop: 10, // Extra padding for status bar
     },
     scrollView: {
         flex: 1,
@@ -244,6 +245,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: 20,
+        paddingTop: 50, // Extra padding for camera lens/notch
         borderBottomWidth: 1,
     },
     backButton: {
