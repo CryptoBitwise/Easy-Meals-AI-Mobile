@@ -593,6 +593,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'flex-end',
         padding: 20,
+        paddingBottom: 40, // Extra padding for navigation bar
         borderTopWidth: 1,
     },
     micButton: {
