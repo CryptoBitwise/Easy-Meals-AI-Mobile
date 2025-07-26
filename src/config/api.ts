@@ -10,5 +10,5 @@ export const API_CONFIG = {
     IS_DEVELOPMENT: __DEV__,
 
     // Beta testing mode
-    BETA_MODE: true, // Set to false for production
+    BETA_MODE: false, // Set to false for production
 }; 
