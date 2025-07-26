@@ -477,6 +477,9 @@ const AccountSettingsScreen = ({ navigation }: any) => {
                         <Text style={styles.saveButtonText}>Save Changes</Text>
                     </TouchableOpacity>
                 )}
+
+                {/* Bottom Spacer for Navigation Bar */}
+                <View style={styles.bottomSpacer} />
             </ScrollView>
         </SafeAreaView>
     );
@@ -485,12 +488,14 @@ const AccountSettingsScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        paddingTop: 10, // Extra padding for status bar
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: 20,
+        paddingTop: 50, // Extra padding for camera lens/notch
         borderBottomWidth: 1,
     },
     headerTitle: {
@@ -588,6 +593,16 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         alignItems: 'center',
         marginTop: 20,
+        marginBottom: 20,
+        marginHorizontal: 16,
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
     },
     saveButtonText: {
         color: '#fff',
@@ -609,6 +624,10 @@ const styles = StyleSheet.create({
         fontSize: 12,
         marginTop: 4,
         fontStyle: 'italic',
+    },
+    bottomSpacer: {
+        height: 100, // Extra space for navigation bar
+        paddingBottom: 20,
     },
 });
 
