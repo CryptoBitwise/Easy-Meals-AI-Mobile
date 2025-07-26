@@ -1,8 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import preferencesService from './preferencesService';
 import { StorageManager } from '../utils/storage';
-
-
+import { API_CONFIG } from '../config/api';
 
 // Centralized AI Service with secure backend integration
 
@@ -16,8 +15,47 @@ async function isAIFeaturesEnabled(): Promise<boolean> {
     }
 }
 
-// Helper function to make OpenAI API calls
-async function callOpenAIAPI(messages: any[], temperature: number = 0.7): Promise<string> {
+// Helper function to make API calls (proxy or direct)
+async function callAIAPI(messages: any[], temperature: number = 0.7): Promise<string> {
+    if (API_CONFIG.BETA_MODE) {
+        // Use backend proxy for beta testing
+        return await callBackendProxy(messages, temperature);
+    } else {
+        // Use direct OpenAI API for production
+        return await callDirectOpenAI(messages, temperature);
+    }
+}
+
+// Backend proxy call for beta testing
+async function callBackendProxy(messages: any[], temperature: number = 0.7): Promise<string> {
+    try {
+        const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/ai/chat`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                messages,
+                temperature,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `Backend error: ${response.status}`);
+        }
+
+        const result = await response.json();
+        return result.response || 'No response from AI';
+    } catch (error) {
+        console.error('Backend proxy error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        throw new Error(`Backend proxy error: ${errorMessage}`);
+    }
+}
+
+// Direct OpenAI API call for production
+async function callDirectOpenAI(messages: any[], temperature: number = 0.7): Promise<string> {
     // Get API key from user settings
     const userApiKey = await StorageManager.getApiKey();
 
@@ -25,7 +63,7 @@ async function callOpenAIAPI(messages: any[], temperature: number = 0.7): Promis
         throw new Error('Please add your OpenAI API key in Account Settings');
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch(API_CONFIG.OPENAI_API_URL, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${userApiKey}`,
@@ -51,7 +89,7 @@ async function callOpenAIAPI(messages: any[], temperature: number = 0.7): Promis
 
 // Legacy function for backward compatibility
 async function callOpenAI(messages: any[], temperature: number = 0.7): Promise<string> {
-    return await callOpenAIAPI(messages, temperature);
+    return await callAIAPI(messages, temperature);
 }
 
 export async function getAIChatResponse(prompt: string): Promise<string> {
@@ -80,7 +118,7 @@ Always be helpful, encouraging, and provide practical cooking advice. Use a warm
         }
     ];
 
-    return await callOpenAI(messages, 0.7);
+    return await callAIAPI(messages, 0.7);
 }
 
 export async function getAIRecipeRecommendations(userPrefs?: any): Promise<any[]> {
@@ -172,7 +210,7 @@ Provide a detailed nutrition analysis in JSON format:
             }
         ];
 
-        const response = await callOpenAIAPI(messages, 0.3);
+        const response = await callAIAPI(messages, 0.3);
 
         // Parse JSON response
         let nutrition;
@@ -217,7 +255,7 @@ Return the response as a JSON array of strings:
             }
         ];
 
-        const response = await callOpenAIAPI(messages, 0.3);
+        const response = await callAIAPI(messages, 0.3);
 
         // Parse JSON response
         let steps;
@@ -262,7 +300,7 @@ Return the response as a JSON array of strings:
             }
         ];
 
-        const response = await callOpenAIAPI(messages, 0.3);
+        const response = await callAIAPI(messages, 0.3);
 
         // Parse JSON response
         let substitutions;
